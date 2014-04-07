@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 var http = require("http");
 var sys = require("sys");
 var url = require("url");
@@ -5,7 +7,7 @@ var WebSocketClient = require("ws");
 
 var port = 9092;
 var defaultHost = "localhost";
-var defaultPort = 9000;
+var defaultPort = 9001;
 var clients = {byID:{},byName:{}};
 var DEFAULT_TIMEOUT = 5*60; // 5 minutes
 var DEBUG = true;
@@ -50,6 +52,10 @@ var configureClient = function(clientData, output) {
         clientData.received = {};
     }
     var subscribers = clientData.config.config.subscribe.messages;
+    clientData.brief = ("brief" in clientData.config.config && (clientData.config.config.brief === true));
+    if ("brief" in clientData.config.config){
+        delete clientData.config.config.brief;
+    }
 
     //first remove any buffers that don't match current client definition
     for (var type in clientData.received){
@@ -79,12 +85,26 @@ var configureClient = function(clientData, output) {
             clientData.received[sub.type] = {};
         }
         if (!clientData.received[sub.type][sub.name]){
-            //this will be an array to act as a buffer
-            //TODO: ensure bufferSize is an integer
-            clientData.received[sub.type][sub.name] = {bufferSize:sub.bufferSize || 1, buffer:[]};
-            if (sub.bufferSize){
-                delete sub.bufferSize;
+            clientData.received[sub.type][sub.name] = {bufferSize:1, buffer:[], forward:undefined}
+        }
+        var subBuffer = clientData.received[sub.type][sub.name];
+
+        //force bufferSize to a positive integer
+        var bufferSize = 1;
+        if ("bufferSize" in sub){
+            //this will floor floats and convert strings
+            var tmp = parseInt(sub.bufferSize);
+            //if it is not NaN
+            if (tmp == tmp){
+                bufferSize = Math.max(1, tmp);
             }
+            delete sub.bufferSize;
+        }
+        subBuffer.bufferSize = bufferSize;
+
+        if ("forward" in sub){
+            subBuffer.forward = sub.forward;
+            delete sub.forward;
         }
     }
 
@@ -105,6 +125,26 @@ var configureClient = function(clientData, output) {
 };
 
 /**
+ * Turns json subscriber messages into semicolon-separated-comma-separated lists.
+ * This simplified format is easier for embedded platforms to parse than JSON.
+ * @param  {json} json The subscriber messages to minify
+ * @return {string}      The resulting semicolon-separated-comma-separated values.
+ */
+var briefify = function(json){
+    var output = "";
+    var keyList = ["name","type","value"];
+    //TODO: it would be nice if this worked for non-Arrays too
+    for (var i = 0; i < json.length; i++) {
+        output += (i == 0 ? "" : ";");
+        var currMsg = json[i].message;
+        for (var j = 0; j < keyList.length; j++) {
+            output += (j == 0 ? "" : ",") + currMsg[keyList[j]]
+        };
+    };
+    return output;
+}
+
+/**
  * Handle the json data from the Server and forward it to the appropriate function
  * @param  {json} json The message sent from the Server
  * @return {boolean}      True iff the message was a recognized type
@@ -120,6 +160,11 @@ var handleMessage = function(json) {
                     bufferObj.buffer.push(json);
                     if (bufferObj.buffer.length > bufferObj.bufferSize){
                         bufferObj.buffer.splice(0,1);
+                    }
+                    if (bufferObj.forward !== undefined){
+                        var address = bufferObj.forward+"?msg="+(clientData.brief ? briefify([json]) : JSON.stringify(json));
+                        http.get(address)
+                            .on("error", function(e){sys.puts("error: " + e.message);});
                     }
                 }
             }
@@ -141,11 +186,25 @@ var handleMessage = function(json) {
 var receivedMessage = function(data, flags) {
     if (data){
         var json = JSON.parse(data);
-        //TODO: check if json is an array, otherwise use it as solo message
-        //when we hit a malformed message, output a warning
-        if (!handleMessage(json)){
+        if (json instanceof Array){
             for(var i = 0, end = json.length; i < end; i++){
-                handleMessage(json[i]);
+                try{
+                    if (!handleMessage(json[i])){
+                        console.log("[receivedMessage] unrecognized type for message at index " + i + ": " + JSON.stringify(json[i]));
+                    }
+                } 
+                catch (error){
+                    console.error("[receivedMessage] error while parsing message in list from server. " + error.name + ": " + error.message);
+                }
+            }
+        } else {
+            try{
+                if (!handleMessage(json)){
+                    console.log("[receivedMessage] unrecognized type for message: " + data);
+                }
+            }
+            catch (error){
+                console.error("[receivedMessage] error while parsing message from server. " + error.name + ": " + error.message);
             }
         }
     }
@@ -243,6 +302,7 @@ setInterval(checkTimeouts, 1 * 60 * 1000);
 
 http.createServer(function (req, res) {
     var config, id, publish, poll, timeout, clientData;
+    var brief = false;
     var output = {error:false,messages:[]};
     res.setHeader("Content-Type", "application/json");
 
@@ -254,18 +314,80 @@ http.createServer(function (req, res) {
         if(req.method == "GET") {
             
             var vals = url.parse(req.url, true).query;
-            config = vals.config;
-            if (config){
+            if ("config" in vals){
                 try{
-                    config = JSON.parse(config);
+                    config = JSON.parse(vals.config);
                 }
                 catch (error){
                     output.error = true;
                     output.messages.push("Error parsing config: " + error.name + " msg: " + error.message);
                     config = undefined;
                 }
+            } else if ("name" in vals){
+                var publish = []
+                try{
+                    if ("pub" in vals){
+                        publish = JSON.parse(vals.pub);
+                        if (!(publish instanceof Array)){
+                            publish = [publish];
+                        }
+                    }
+                }
+                catch (error){
+                    //perhaps it is semicolon-separated-comma-separated
+                    var pubKeys = ["name","type","default"];
+                    var pubs = vals.pub.split(";");
+                    for (var i = 0; i < pubs.length; i++) {
+                        var currPub = pubs[i].split(",");
+                        var currJsonPub = {};
+                        for (var j = 0; j < currPub.length && j < pubKeys.length; j++) {
+                            currJsonPub[pubKeys[j]] = currPub[j];
+                        };
+                        if (!("type" in currJsonPub)){
+                            output.error = true;
+                            output.message.push("Error parsing publisher at index " + i + ", must define at least 'name' and 'type'");
+                        } else {
+                            publish.push(currJsonPub);
+                        }
+                    };
+                }
+                var subscribe = []
+                try{
+                    if ("sub" in vals){
+                        subscribe = JSON.parse(vals.sub);
+                        if (!(subscribe instanceof Array)){
+                            subscribe = [subscribe];
+                        }
+                    }
+                }
+                catch (error){
+                    //perhaps it is semicolon-separated-comma-separated
+                    var subKeys = ["name","type","bufferSize","forward"];
+                    console.log("sub:"+vals.sub);
+                    var subs = vals.sub.split(";");
+                    console.log("subs:"+subs);
+                    for (var i = 0; i < subs.length; i++) {
+                        var currSub = subs[i].split(",");
+                        console.log("currSub:"+currSub);
+                        var currJsonSub = {};
+                        for (var j = 0; j < currSub.length && j < subKeys.length; j++) {
+                            currJsonSub[subKeys[j]] = currSub[j];
+                        };
+                        if (!("type" in currJsonSub)){
+                            output.error = true;
+                            output.message.push("Error parsing subscriber at index " + i + ", must define at least 'name' and 'type'");
+                        } else {
+                            subscribe.push(currJsonSub);
+                        }
+                    };
+                }
+                //brief defaults to true when using querystring config vs json config
+                var clientBrief = !("brief" in vals) || vals.brief === true;
+                brief = clientBrief;
+                config = {"config":{"name":vals.name,"publish":{"messages":publish}, "subscribe":{"messages":subscribe}, "brief":clientBrief}};
+                console.log(JSON.stringify(config));
             }
-            id = vals.clientID;
+            id = vals.clientID || vals.id;
             poll = vals.poll;
             if (poll){
                 poll = poll.toLowerCase() == "true";
@@ -297,6 +419,7 @@ http.createServer(function (req, res) {
         //TODO: method
         if (id !== undefined){
             clientData = clients.byID[id];
+            brief = clientData.brief;
             clientData.lastUpdate = getSecondsEpoch();
             if (timeout){
                 clientData.updateTimeout = timeout;
@@ -316,6 +439,7 @@ http.createServer(function (req, res) {
                     //I believe this is updating both byID and byName
                     clientData.config = config;
                     configureClient(clientData, output);
+                    brief = clientData.brief;
                 }
             }
             if (!output.error){
@@ -371,6 +495,7 @@ http.createServer(function (req, res) {
                         clientData = {"config":config};
                         clientData.updateTimeout = timeout || DEFAULT_TIMEOUT;
                         configureClient(clientData, output);
+                        brief = clientData.brief;
                         if (!output.error){
                             clients.byID[clientID] = clientData;
                             clients.byName[config.config.name] = clientData;
@@ -390,6 +515,19 @@ http.createServer(function (req, res) {
         output.messages.push("Unexpected error: " + error.name + " msg: " + error.message);
     }
     output.clientID = id;
-    res.end(JSON.stringify(output));
+    if (brief){
+        var briefOut = (output.clientID === undefined ? "-1:" : "" + output.clientID + ":");
+        if (output.error){
+            briefOut += "ERR:" + output.messages.join(";");
+        } else {
+            briefOut += "OK:";
+            if (poll){
+                briefOut += briefify(output.received);
+            }
+        }
+        res.end(briefOut);
+    } else {
+        res.end(JSON.stringify(output));   
+    }
     
 }).listen(port);
