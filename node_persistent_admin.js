@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 var processArguments = function(){
     var argv = process.argv;
     for(var i = 2; i < argv.length; i++){
@@ -294,36 +296,7 @@ var addManagedRoute = function(command){
         persistentRoutes.push(newRoute);
         //and now lets make sure we are all connected!
         
-        //for each client
-        for (var i = clients.length - 1; i >= 0; i--) {
-            var currPubClient = clients[i];
-            //if the client is matched by the pub side of this managed route
-            if (newRoute.publisher.clientRE.test(currPubClient.name)){
-                //for each publisher in that client
-                for (var j = currPubClient.publish.messages.length - 1; j >= 0; j--) {
-                    var currPub = currPubClient.publish.messages[j]
-                    //if the publisher is matched by this managed route
-                    if (newRoute.publisher.nameRE.test(currPub.name)){
-                        //for each client
-                        for (var k = clients.length - 1; k >= 0; k--) {
-                            var currSubClient = clients[k];
-                            //if the client is matched by the sub side of this managed route
-                            if (newRoute.subscriber.clientRE.test(currSubClient.name)){
-                                //for each sub in that client
-                                for (var m = currSubClient.subscribe.messages.length - 1; m >= 0; m--) {
-                                    var currSub = currSubClient.subscribe.messages[m];
-                                    //if the subscriber is matched by this managed route
-                                    if (newRoute.subscriber.nameRE.test(currSub.name)){
-                                        //tell the Server to add the route!
-                                        addRoute(currPubClient, currPub, currSubClient, currSub);
-                                    }
-                                };
-                            }
-                        };
-                    }
-                };
-            }
-        };
+        searchByPubClient(newRoute);
         
         //user feedback
         l("added persistent route");
@@ -354,6 +327,64 @@ wss.on('connection', function(ws){
 stdin.on('data',function(command){
     runCommand(command.toString());
 });
+
+var searchByPubClient = function(persistentDef){
+    //for each client
+    for (var i = clients.length - 1; i >= 0; i--) {
+        var currPubClient = clients[i];
+        //if the client is matched by the pub side of this managed route
+        var arrMatch = currPubClient.name.match(persistentDef.publisher.clientRE);
+        if (arrMatch != null){
+            searchByPub(persistentDef, currPubClient, arrMatch.slice(1));
+        }
+    }
+};
+
+var populateMatches = function(reString, matches){
+    for(var i = matches.length - 1; i >= 0; i--){
+        reString = reString.replace("{$"+(i+1)+"}", matches[i], "g");
+    }
+    return reString;
+}
+
+var searchByPub = function(persistentDef, pubClient, matches){
+    //for each publisher
+    for (var j = pubClient.publish.messages.length - 1; j >= 0; j--) {
+        var currPub = pubClient.publish.messages[j];
+        var reString = populateMatches(persistentDef.publisher.name, matches);
+        //if the publisher is matched by this managed route
+        var arrMatch = currPub.name.match(new RegExp(reString));
+        if (arrMatch != null){
+            searchBySubClient(persistentDef, pubClient, currPub, matches.concat(arrMatch.slice(1)));
+        }
+    }
+};
+
+var searchBySubClient = function(persistentDef, pubClient, pub, matches){
+    //for each client
+    for (var k = clients.length - 1; k >= 0; k--) {
+        var currSubClient = clients[k];
+        var reString = populateMatches(persistentDef.subscriber.clientName, matches);
+        //if the client is matched by the sub side of this managed route
+        var arrMatch = currSubClient.name.match(new RegExp(reString));
+        if (arrMatch != null){
+            searchBySub(persistentDef, pubClient, pub, currSubClient, matches.concat(arrMatch.slice(1)));
+        }
+    }
+};
+
+var searchBySub = function(persistentDef, pubClient, pub, subClient, matches){
+    //for each subscriber
+    for (var m = subClient.subscribe.messages.length - 1; m >= 0; m--) {
+        var currSub = subClient.subscribe.messages[m];
+        var reString = populateMatches(persistentDef.subscriber.name, matches);
+        //if the subscriber is matched by this managed route
+        if (new RegExp(reString).test(currSub.name)){
+            //tell the Server to add the route!
+            addRoute(pubClient, pub, subClient, currSub);
+        }
+    };
+};
 
 var printHelpText = function(){
     l("This is a CLI admin for maintaining persistent routes in a spacebrew network.");
@@ -420,43 +451,11 @@ loadConfig(false);
  * route that should exist.
  */
 var ensureConnected = function(){
-    //for each publisher, if that publisher is in the persistent routes
-    //      for each subscriber, if that subscriber is the other end of that persistent route
-    //          send the add route message
-
-    //for each publisher
-    for (var i = 0; i < clients.length; i++){
-        for (var j = 0; j < clients[i].publish.messages.length; j++){
-            //for each persistent route
-            for (var k = 0; k < persistentRoutes.length; k++){
-                var currRoute = persistentRoutes[k];
-                //if the publisher is in a persistent route
-                if (currRoute.publisher.clientRE.test(clients[i].name) &&
-                    currRoute.publisher.nameRE.test(clients[i].publish.messages[j].name)){
-                    //for each subscriber
-                    for (var m = 0; m < clients.length; m++){
-                        for (var n = 0; n < clients[m].subscribe.messages.length; n++){
-                            if (currRoute.subscriber.clientRE.test(clients[m].name) &&
-                                currRoute.subscriber.nameRE.test(clients[m].subscribe.messages[n].name)){
-                                //if the pub/sub pair match the persistent route
-                                //send route message
-                                wsClient.send(JSON.stringify({
-                                    route:{type:'add',
-                                        publisher:{clientName:clients[i].name,
-                                                    name:clients[i].publish.messages[j].name,
-                                                    type:clients[i].publish.messages[j].type,
-                                                    remoteAddress:clients[i].remoteAddress},
-                                        subscriber:{clientName:clients[m].name,
-                                                    name:clients[m].subscribe.messages[n].name,
-                                                    type:clients[m].subscribe.messages[n].type,
-                                                    remoteAddress:clients[m].remoteAddress}}
-                                }));
-                            }
-                        }
-                    }
-                }
-            }
-        }
+    //for each persistent route
+    // kick off the search for matches
+    for(var i = persistentRoutes.length - 1; i >= 0; i--){
+        var currRoute = persistentRoutes[i];
+        searchByPubClient(currRoute);
     }
 };
 
