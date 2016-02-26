@@ -3,3 +3,6 @@ node_js:
   - "stable"
   - "4.3"
   - "0.12"
+os:
+  - linux
+  - osx
