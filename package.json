@@ -24,6 +24,7 @@
   "author": "LAB at Rockwell Group",
   "license": "MIT",
   "dependencies": {
+    "node-uuid": "^1.4.7",
     "ws": "^1.0.1"
   },
   "optionalDependencies": {
