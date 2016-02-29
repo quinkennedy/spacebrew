@@ -64,12 +64,100 @@ Leaf.prototype.matches = function(otherClient){
  * @returns {Object} {name:string, description:string, subscribers:Array, publishers:Array, metadata:Object}
  */
 Leaf.prototype.toMap = function(){
-  return {name:this.name,
-          description:this.description,
-          subscribers:this.subscribers,
-          publishers:this.publishers,
-          metadata:this.metadata,
-          uuid:this.uuid};
+  var map = {name:this.name,
+             description:this.description,
+             subscribers:[],
+             publishers:[],
+             metadata:this.metadata,
+             uuid:this.uuid};
+  for (var pubI = 0; pubI < this.publishers.length; pubI++){
+    var pub = this.publishers[pubI];
+    map.publishers.push({name:pub.name,
+                         type:pub.type,
+                         default:pub.default});
+  }
+  for (var subI = 0; subI < this.subscribers.length; subI++){
+    var sub = this.subscribers[subI];
+    map.subscribers.push({name:sub.name,
+                          type:sub.type});
+  }
+  return map;
+};
+
+/**
+ * adds the specified connection to the provided publisher
+ *   This method ensures that duplicate connections are not defined.
+ * @param {object} publisher The publisher endpoint of the connection.
+ *   This must be a publisher registered in this client.
+ * @param {Leaf} subClient The client that contains the subscriber endpoint
+ *   of this connection.
+ * @param {object} subscriber The subscriber endpoint of the connection.
+ *   Must be a subscriber registered in the subClient.
+ * @param {Route} route The route that matches this connection.
+ */
+Leaf.prototype.addConnection = function(publisher, 
+                                        subClient, 
+                                        subscriber, 
+                                        route){
+  var added = false;
+  //go through all connections registered with the specified publisher.
+  for(var connectionI = publisher.connectedTo.length - 1;
+      connectionI >= 0 && !added;
+      connectionI--){
+    var connection = publisher.connectedTo[connectionI];
+    //if there are any copies, add the route to that existing connection.
+    if (connection.client === subClient &&
+        connection.endpoint === subscriber){
+      connection.routes.push(route);
+      added = true;
+    }
+  }
+
+  //otherwise, create a new connection.
+  if(!added){
+    publisher.connectedTo.push({client:subClient,
+                                endpoint:subscriber,
+                                routes:[route]});
+  }
+};
+
+/**
+ * Returns an array of connection definitions specifying which 
+ *  of this client's publishers are connected to which subscribers.
+ * @return {Array} [{type:string, from:{uuid:string, endpoint:string}, to:{uuid:string, endpoint:string}, routes:[string,...]},...]
+ */
+Leaf.prototype.getOutgoingConnections = function(){
+  var pubClient = this;
+  var connections = [];
+
+  //for each publisher of this client
+  for(var publisherI = this.publishers.length - 1;
+      publisherI >= 0;
+      publisherI--){
+    var publisher = this.publishers[publisherI];
+    //for each connection from this publisher
+    for(var connectionI = publisher.connectedTo.length - 1;
+        connectionI >= 0;
+        connectionI--){
+      var connectedTo = publisher.connectedTo[connectionI];
+      //construct a connection map
+      var connection = {type:publisher.type,
+                        from:{uuid:pubClient.uuid,
+                              endpoint:publisher.name},
+                        to:{uuid:connectedTo.client.uuid,
+                            endpoint:connectedTo.endpoint.name},
+                        routes:[]};
+      //add all linked routes
+      for(var routeI = connectedTo.routes.length - 1;
+          routeI >= 0;
+          routeI--){
+        var route = connectedTo.routes[routeI];
+        connection.routes.push(route.uuid);
+      }
+      connections.push(connection);
+    }
+  }
+  return connections;
 };
 
 /**
@@ -79,7 +167,7 @@ Leaf.prototype.toMap = function(){
  *   Ideally this is in the same format as will be returned by this function.
  * @return {Array} the cleaned-up list of subscribers. 
  *   Any malformed subscribers are excluded. 
- *   [{name:string, type:string},...]
+ *   [{name:string, type:string, client:this},...]
  */
 Leaf.cleanSubscribers = function(subscriberList){
   var subs = [];
@@ -92,13 +180,10 @@ Leaf.cleanSubscribers = function(subscriberList){
 };
 
 /**
- * Standardizes a publisher list to ensure that it contains
- *   only the necessary data
+ * Creates a publisher list with the appropriate format
  * @param publisherList {Array} An array that contains publisher information.
- *   Ideally this is in the same format as will be returned by this function.
- * @return {Array} the cleaned-up list of publishers.
- *   Any malformed publishers are excluded. 
- *   [{name:string, type:string, default:},...]
+ *   Ideally in this format [{name:string, type:string, default:},...]
+ * @return {Array} An appropriately-initialized list of publishers.
  */
 Leaf.cleanPublishers = function(publisherList){
   var pubs = [];
@@ -106,7 +191,9 @@ Leaf.cleanPublishers = function(publisherList){
     var curr = publisherList[i];
     pubs.push({name:'' + curr.name, 
                type:'' + curr.type, 
-               default:'' + curr.default});
+               default:'' + curr.default,
+               connectedTo:[],
+               routes:[]});
   }
   return pubs;
 };

@@ -29,14 +29,115 @@ var Manager = function(){
  * @throws Error if argument is not a Leaf instance
  */
 Manager.prototype.addClient = function(client){
+  //make sure the client is the proper type
   if (!(client instanceof Leaf)){
     throw new TypeError('argument must be a Leaf instance');
   }
+  //make sure there is not a duplicate client already registered
   var clientUnique = (this.indexOfClient(client) === -1);
   if (clientUnique){
+    //connect this client's publishers and subscribers
+    // to other endpoints based on the currently defined routes
+    this.connectClient(client);
+
+    //add the client to the current list of clients
     this.clients.push(client);
   }
   return clientUnique;
+};
+
+/**
+ * Goes through the current list of routes and connects 
+ *   this client's endpoints to other endpoints based on 
+ *   the currently defined routes.
+ * @param {Leaf} client the client to connect
+ */
+Manager.prototype.connectClient = function(client){
+  var pubClient,
+      //pubClientI,
+      publisher,
+      publisherI,
+      route,
+      routeI,
+      subClient,
+      subClientI,
+      subscriber,
+      subscriberI;
+
+  pubClient = client;
+      
+  //for each route
+  for(routeI = this.routes.length - 1; routeI >= 0; routeI--){
+    route = this.routes[routeI];
+    //if this client matches the route's "from" client
+    if(route.matchesFromClient(pubClient)){
+      //go through each publisher on this client
+      for(publisherI = pubClient.publishers.length - 1; 
+          publisherI >= 0; 
+          publisherI--){
+        publisher = pubClient.publishers[publisherI]; 
+        //if this publisher matches the route's "from" endpoint
+        if(route.matchesPublisher(pubClient, publisher)){
+          //then associate this publisher with this route
+          publisher.routes.push(route);
+          route.from.matched.push({client:pubClient,
+                                   endpoint:publisher});
+          //TODO
+          //now because we want to handle pattern-matching with
+          // back-referencing from subscribers 
+          // to captured patterns in publishers
+          // we have to go through all subscribers in-context.
+
+          //so for each registered client
+          for(subClientI = this.clients.length - 1; 
+              subClientI >= 0;
+              subClientI--){
+            subClient = this.clients[subClientI];
+            //if this client matches the route's "to" client
+            if(route.matchesPubToClient(pubClient, publisher, subClient)){
+              //for each subscriber in that client
+              for(subscriberI = subClient.subscribers.length - 1;
+                  subscriberI >= 0;
+                  subscriberI--){
+                subscriber = subClient.subscribers[subscriberI];
+                //see if the subscriber matches this route/publisher combo
+                if(route.matchesPair(pubClient, publisher, 
+                                     subClient, subscriber)){
+                  //and connect the subscriber to this publisher
+                  pubClient.addConnection(publisher, subClient, subscriber, route);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    //now check if this client's subscribers match this route
+    subClient = client;
+    
+    //for each publisher that matches this route
+    for(publisherI = route.from.matched.length - 1;
+        publisherI >= 0;
+        publisherI--){
+      pubClient = route.from.matched[publisherI].client;
+      publisher = route.from.matched[publisherI].endpoint;
+      //if this client matches the route's "to"
+      if(route.matchesPubToClient(pubClient, publisher, subClient)){
+        //for each subscriber in this client
+        for(subscriberI = subClient.subscribers.length - 1;
+            subscriberI >= 0;
+            subscriberI--){
+          subscriber = subClient.subscribers[subscriberI];
+          //if this subscriber matches the route/publisher combo
+          if(route.matchesPair(pubClient, publisher,
+                               subClient, subscriber)){
+            //connect the subscriber to this publisher
+            pubClient.addConnection(publisher, subClient, subscriber, route);
+          }
+        }
+      }
+    }
+  }
 };
 
 /**
@@ -142,6 +243,29 @@ Manager.prototype.getRoutes = function(){
     routes.push(curr.toMap());
   }
   return routes;
+};
+
+/**
+ * Gets an array of specific publisher/subscriber connections that currently exist.
+ * @returns {Array} an array of pub/sub connection info:
+ *   [{type:string, from:{uuid:string, endpoint:string}, to:{uuid:string, endpoint:string}, routes:[string,...]}]
+ */
+Manager.prototype.getConnections = function(){
+  var connections = [];
+  //the connections are stored as references from each publisher to subscriber
+  
+  //for each client
+  for(var pubClientI = this.clients.length - 1;
+      pubClientI >= 0;
+      pubClientI--){
+    var pubClient = this.clients[pubClientI];
+    //get all the connections coming from that client
+    var clientConnections = pubClient.getOutgoingConnections();
+    //and add them to the list
+    connections = connections.concat(clientConnections);
+  }
+
+  return connections;
 };
 
 module.exports = Manager;

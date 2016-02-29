@@ -2,6 +2,8 @@
 var chai = require('chai');
 var expect = chai.expect;
 var Leaf = require('../leaf.js');
+var D = require('./data.js');
+var d = new D();
 
 var cleanEndpointsEmptyTests = function(cleanFunc){
       expect(cleanFunc()).to.deep.equal([]);
@@ -82,24 +84,17 @@ describe('Leaf', function(){
   );
   it('test matches',
     function(){
-      var leafd = {name:'leaf',
-                   subscribers:{},
-                   publishers:{},
-                   callback:function(){},
-                   description:'test leaf',
-                   metadata:{}};
-      var leaf = new Leaf(leafd.name,
-                          leafd.subscribers,
-                          leafd.publishers,
-                          leafd.callback,
-                          leafd.description,
-                          leafd.metadata);
-      expect(leaf.matches(leafd)).to.be.true;
+      var leaf = D.initClient(d.client1);
+      expect(leaf.matches(d.client1)).to.be.true;
       expect(leaf.matches(leaf.uuid)).to.be.true;
       expect(leaf.matches(leaf)).to.be.true;
-      expect(leaf.matches({name:leafd.name, metadata:leafd.metadata})).to.be.true;
-      expect(leaf.matches({name:'bogus', metadata:leafd.metadata})).to.be.false;
-      expect(leaf.matches(leafd.name)).to.be.false;
+      expect(leaf.matches({name:d.client1.name, 
+                           metadata:d.client1.metadata})).
+        to.be.true;
+      expect(leaf.matches({name:'bogus', 
+                           metadata:d.client1.metadata})).
+        to.be.false;
+      expect(leaf.matches(d.client1.name)).to.be.false;
     }
   );
 });

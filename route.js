@@ -11,9 +11,9 @@ var Leaf = require('./leaf.js');
  * @constructor
  * @param {string} style The style of route this is. Options available in Route.style
  * @param {string|RegExp} type The type of data this route will carry ('string', 'boolean', 'range', ...)
- * @param {Object|string} fromId the identifier for the client that is publishing data. If style = 'string' this should be an {name:string, metadata:object} definition that will string match the source client. if style = 'regexp' this should be an {name:RegExp, metadata:object} definition that will regexp match the source client. if style = 'uuid' this should be a UUID string that matches the source client's UUID.
+ * @param {Object|string} fromId the identifier for the client that is publishing data. If style = 'string' this should be an {name:string, metadata:object} definition that will string match the source client. if style = 'regexp' this should be an {name:RegExp, metadata:Array} definition that will regexp match the source client. if style = 'uuid' this should be a UUID string that matches the source client's UUID.
  * @param {string|RegExp} publisherName the particular publisher from the client to route data from. stirng or RegExp depending on the style.
- * @param {Object|string} toId the identifier for the client that is receiving data. If style = 'string' this should be an {name:string, metadata:object} definition that will string match the destination client. if style = 'regexp' this should be an {name:RegExp, metadata:object} definition that will regexp match the destination client. if style = 'uuid' this should be a UUID string that matches the destination client's UUID.
+ * @param {Object|string} toId the identifier for the client that is receiving data. If style = 'string' this should be an {name:string, metadata:object} definition that will string match the destination client. if style = 'regexp' this should be an {name:RegExp, metadata:Array} definition that will regexp match the destination client. if style = 'uuid' this should be a UUID string that matches the destination client's UUID.
  * @param {string|RegExp} subscriberName the particular subscriber from the client to route data to. stirng or RegExp depending on the style.
  */
 var Route = function(style, type, fromId, publisherName, toId, subscriberName){
@@ -33,8 +33,16 @@ var Route = function(style, type, fromId, publisherName, toId, subscriberName){
         throw new Error(argName + 
                         ' must have both name and metadata properties');
       }
-      if (typeof(id.metadata) !== 'object'){
-        throw new Error(argName + '.metadata must be an object/map');
+      if (style === Route.styles.STRING){
+        if (typeof(id.metadata) !== 'object'){
+          throw new Error(argName + 
+                          '.metadata must be an object/map when style is ' + 
+                          style);
+        }
+      } else if (!(id.metadata instanceof Array)){
+        throw new Error(argName + 
+                        '.metadata must be an Array when style is ' + 
+                        style);
       }
     };
     checkId(fromId, 'fromId');
@@ -97,6 +105,10 @@ var Route = function(style, type, fromId, publisherName, toId, subscriberName){
   } else {//unrecognized style
     throw new Error('unrecognized style');
   }
+  //create arrays to reference endpoints that match each half of this route
+  this.from.matched = [];
+  this.to.matched = [];
+  //create a UUID for referencing this Route externally
   this.uuid = uuid.v1();
 };
 
@@ -169,6 +181,223 @@ Route.prototype.toMap = function(){
     out.to.metadata = this.to.metadata;
   }
   return out;
+};
+
+/**
+ * gets an array of only the backreferences in the resulting
+ *   array from RegExp.exec or String.match
+ * @param {Array} matchArray A resulting array from 
+ *   RegExp.exec or String.match
+ * @returns {Array} all array elements except for the first
+ */
+Route.getBackref = function(matchArray){
+  //check truthiness
+  if (matchArray){
+    return matchArray.slice(1, matchArray.length);
+  } else {
+    return [];
+  }
+};
+
+/**
+ *
+ */
+Route.subBackref = function(backref, regexp){
+  var str = regexp.toString();
+  for(var i = 1; i <= 9; i++){
+    var replaceWith = (backref.length >= i ?
+                       backref[i - 1] :
+                       '\\' + (i - backref.length));
+    var str2 = str;
+    do{
+      str = str2;
+      str2 = str.replace('\\' + i, replaceWith);
+    }while(str !== str2);
+  }
+  //trim off the '/' characters at the beginning and end to parse correctly
+  return new RegExp(str.substring(1, str.length - 1));
+};
+
+/**
+ * Matches a list of regular expressions against a list of strings.
+ *   capture groups from earlier regular expressions can be referenced
+ *   by later expressions.
+ * @param {Array} regexps An array of RegExp objects.
+ * @param {Array} strings An array of strings to match against 
+ *   the Regular Expressions. strings[0] will be matched against regexps[0]
+ *   and so on.
+ * @returns {boolean} true if all regular expressions match their
+ *   respective string.
+ */
+Route.matchRegexpChain = function(regexps, strings){
+  var matches = regexps.length === strings.length;
+  var backref = [];
+  for(var i = 0; i < regexps.length && matches; i++){
+    var re = Route.subBackref(backref, regexps[i]);
+    var str = strings[i];
+    var match = re.exec(str);
+    matches = (match !== null);
+    if (matches){
+      backref = backref.concat(Route.getBackref(match));
+    }
+  }
+  return matches;
+}
+
+/**
+ *
+ * @param {Array} mRegexp an array of metadata regexp definitions from
+ *   a Route.
+ * @param {Object} mClient The Leaf metadata to validate
+ * @returns {boolean} true if all the keys and values of the
+ *   provided Client metadata object matches against an entry in the
+ *   RegExp metadata matching array. Additionally, all entries in the 
+ *   RegExp matching array must match against at least one of the 
+ *   Client metadata properties.
+ */
+Route.metadataRegexpMatch = function(mRegexp, mClient){
+  /** an array to make sure all entries in mRegexp are 
+   *   sucessfully matched against */
+  var regexpMatched = [];
+  while(regexpMatched.length !== mRegexp.length){
+    regexpMatched.push(false);
+  }
+  /** tracks whether the current property in the 
+   *   Client metadata has been matched */
+  var propMatched = true;
+
+  //go through each key in the metadata
+  var clientKeys = Object.keys(mClient);
+  for(var metadataI = clientKeys.length - 1;
+      metadataI >= 0 && propMatched;
+      metadataI--){
+    var key = clientKeys[metadataI];
+    var propMatched = false;
+    //see if there is a regex in the RegExp array that matches this key
+    for(var regexpI = mRegexp.length - 1;
+        regexpI >= 0;
+        regexpI--){
+      if(propMatched && regexpMatched[regexpI]){
+        continue;
+      }
+      var propRegexp = mRegexp[regexpI];
+      if(Route.matchRegexpChain([propRegexp.key, 
+                                 propRegexp.value],
+                                [key,
+                                 mClient[key]])){
+        propMatched = true;
+        regexpMatched[regexpI] = true;
+      }
+    }
+  }
+
+  var matched = propMatched;
+  // check that all entries in the RegExp matching array
+  //  have matched against something
+  for(var reMatchI = regexpMatched.length - 1;
+      reMatchI >= 0 && matched;
+      reMatchI--){
+    matched = matched && regexpMatched[reMatchI];
+  }
+  return matched;
+};
+
+/**
+ * determines whether the provided client matches the from-client
+ *   specification of this route. This function does not look at
+ *   the individual publishers of the client.
+ * @param {Leaf} pubClient the client to test
+ * @returns {boolean} true if the client is matched by this route
+ */
+Route.prototype.matchesFromClient = function(pubClient){
+  var match = true;
+  if (this.style === Route.styles.UUID){
+    match = match && (pubClient.uuid === this.from.uuid);
+  } else if(this.style === Route.styles.STRING){
+    match = match && (pubClient.name === this.from.name);
+    match = match && 
+            Leaf.metadataMatch(pubClient.metadata, this.from.metadata);
+  } else if(this.style === Route.styles.REGEXP){
+    match = match && this.from.name.test(pubClient.name);
+    match = match && 
+            Route.metadataRegexpMatch(this.from.metadata, pubClient.metadata);
+  } else {
+    //unrecognized style...
+    //maybe should throw an error
+    match = false;
+  }
+  return match;
+};
+
+Route.prototype.matchesPublisher = function(pubClient, publisher){
+  var match = this.matchesFromClient(pubClient);
+  if (this.style === Route.styles.UUID || 
+      this.style === Route.styles.STRING){
+    match = match && (this.from.endpoint === publisher.name);
+  } else if (this.style === Route.styles.REGEXP){
+    match = match && Route.matchRegexpChain([this.from.name, 
+                                             this.type,
+                                             this.from.endpoint],
+                                            [pubClient.name,
+                                             publisher.type,
+                                             publisher.name]);
+  } else {
+    //unrecognized style...
+    //maybe should throw an error
+    match = false;
+  }
+  return match;
+};
+
+Route.prototype.matchesPubToClient = function(pubClient, publisher, subClient){
+  var match = this.matchesPublisher(pubClient, publisher);
+  if (this.style === Route.styles.UUID){ 
+    match = match && (this.to.uuid === subClient.uuid);
+  } else if (this.style === Route.styles.STRING){
+    match = match && (this.to.name === subClient.name);
+  } else if (this.style === Route.styles.REGEXP){
+    match = match && Route.matchRegexpChain([this.from.name, 
+                                             this.type,
+                                             this.from.endpoint,
+                                             this.to.name],
+                                            [pubClient.name,
+                                             publisher.type,
+                                             publisher.name,
+                                             subClient.name]);
+    match = match && 
+            Route.metadataRegexpMatch(this.to.metadata, subClient.metadata);
+  } else {
+    //unrecognized style...
+    //maybe should throw an error
+    match = false;
+  }
+  return match;
+};
+
+Route.prototype.matchesPair = function(pubClient, publisher, 
+                                       subClient, subscriber){
+  var match = (publisher.type === subscriber.type);
+  match = this.matchesPubToClient(pubClient, publisher, subClient);
+  if (this.style === Route.styles.UUID || 
+      this.style === Route.styles.STRING){
+    match = match && (this.to.endpoint === subscriber.name);
+  } else if (this.style === Route.styles.REGEXP){
+    match = match && Route.matchRegexpChain([this.from.name, 
+                                             this.type,
+                                             this.from.endpoint,
+                                             this.to.name,
+                                             this.to.endpoint],
+                                            [pubClient.name,
+                                             publisher.type,
+                                             publisher.name,
+                                             subClient.name,
+                                             subscriber.name]);
+  } else {
+    //unrecognized style...
+    //maybe should throw an error
+    match = false;
+  }
+  return match;
 };
 
 module.exports = Route;
