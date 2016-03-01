@@ -9,12 +9,30 @@ var Leaf = require('./leaf.js');
 /**
  * Creates an instance of a Spacebrew Route
  * @constructor
- * @param {string} style The style of route this is. Options available in Route.style
- * @param {string|RegExp} type The type of data this route will carry ('string', 'boolean', 'range', ...)
- * @param {Object|string} fromId the identifier for the client that is publishing data. If style = 'string' this should be an {name:string, metadata:object} definition that will string match the source client. if style = 'regexp' this should be an {name:RegExp, metadata:Array} definition that will regexp match the source client. if style = 'uuid' this should be a UUID string that matches the source client's UUID.
- * @param {string|RegExp} publisherName the particular publisher from the client to route data from. stirng or RegExp depending on the style.
- * @param {Object|string} toId the identifier for the client that is receiving data. If style = 'string' this should be an {name:string, metadata:object} definition that will string match the destination client. if style = 'regexp' this should be an {name:RegExp, metadata:Array} definition that will regexp match the destination client. if style = 'uuid' this should be a UUID string that matches the destination client's UUID.
- * @param {string|RegExp} subscriberName the particular subscriber from the client to route data to. stirng or RegExp depending on the style.
+ * @param {string} style The style of route this is. 
+ *   Options available in Route.style
+ * @param {string|RegExp} type The type of data this route will 
+ *   carry ('string', 'boolean', 'range', ...)
+ * @param {Object|string} fromId the identifier for the client that is 
+ *   publishing data. 
+ *   If style = 'string' this should be an {name:string, metadata:object} 
+ *     definition that will string match the source client. 
+ *   if style = 'regexp' this should be an {name:RegExp, metadata:Array} 
+ *     definition that will regexp match the source client. 
+ *   if style = 'uuid' this should be a UUID string that matches the 
+ *     source client's UUID.
+ * @param {string|RegExp} publisherName the particular publisher from 
+ *   the client to route data from. stirng or RegExp depending on the style.
+ * @param {Object|string} toId the identifier for the client that is 
+ *   receiving data. 
+ *   If style = 'string' this should be an {name:string, metadata:object} 
+ *     definition that will string match the destination client. 
+ *   if style = 'regexp' this should be an {name:RegExp, metadata:Array} 
+ *     definition that will regexp match the destination client. 
+ *   if style = 'uuid' this should be a UUID string that matches the 
+ *     destination client's UUID.
+ * @param {string|RegExp} subscriberName the particular subscriber from the 
+ *   client to route data to. stirng or RegExp depending on the style.
  */
 var Route = function(style, type, fromId, publisherName, toId, subscriberName){
   if (Route.styles.indexOf(style) === -1){
@@ -72,7 +90,10 @@ var Route = function(style, type, fromId, publisherName, toId, subscriberName){
                  endpoint:subscriberName,
                  metadata:toId.metadata};
     } else {//type error
-      throw new TypeError('type, fromId.name, publisherName, toId.name, and subscriberName must all be RegExp objects when style is ' + style);
+      throw new TypeError('type, fromId.name, publisherName, toId.name, and ' +
+                          'subscriberName must all be RegExp objects when ' +
+                          'style is ' + 
+                          style);
     }
   } else if (style === Route.styles.UUID){
     if (typeof(type) === 'string' &&
@@ -84,7 +105,9 @@ var Route = function(style, type, fromId, publisherName, toId, subscriberName){
       this.to = {uuid:toId,
                  endpoint:subscriberName};
     } else {//type error
-      throw new TypeError('type, publisherName, and subscriberName must all be strings when style is ' + style);
+      throw new TypeError('type, publisherName, and subscriberName must all ' +
+                          'be strings when style is ' + 
+                          style);
     }
   } else if (style === Route.styles.STRING){
     if (typeof(type) === 'string' &&
@@ -100,7 +123,9 @@ var Route = function(style, type, fromId, publisherName, toId, subscriberName){
                  endpoint:subscriberName,
                  metadata:toId.metadata};
     } else {//type error
-      throw new TypeError('type, fromId.name, publisherName, toId.name, and subscriberName must all be strings when style is ' + style);
+      throw new TypeError('type, fromId.name, publisherName, toId.name, and ' +
+                          'subscriberName must all be strings when style is ' +
+                          style);
     }
   } else {//unrecognized style
     throw new Error('unrecognized style');
@@ -127,7 +152,8 @@ Route.styles.UUID = 'uuid';
  * Returns true if the two routes' identifying information matches.
  * @param {Object|string} otherRoute The route to compare against.
  *   can either be a Route object,
- *   a map {type:string, from:{name:string, endpoint:string, metadata:object}, to:{name:string, endpoint:string, metadata:object}},
+ *   a map {type:string, from:{name:string, endpoint:string, metadata:object}, 
+ *     to:{name:string, endpoint:string, metadata:object}},
  *   or a uuid.
  * @return {boolean} true if the clients' names and all metadata match
  */
@@ -154,8 +180,10 @@ Route.prototype.matches = function(otherRoute){
     } else {
       match = match && isequal(this.from.name, otherRoute.from.name);
       match = match && isequal(this.to.name, otherRoute.to.name);
-      match = match && Leaf.metadataMatch(this.from.metadata, otherRoute.from.metadata);
-      match = match && Leaf.metadataMatch(this.to.metadata, otherRoute.to.metadata);
+      match = match && Leaf.metadataMatch(this.from.metadata, 
+                                          otherRoute.from.metadata);
+      match = match && Leaf.metadataMatch(this.to.metadata, 
+                                          otherRoute.to.metadata);
     }
   }
   return match && true;
@@ -163,7 +191,9 @@ Route.prototype.matches = function(otherRoute){
 
 /**
  * returns a simple map of this routes data
- * @returns {Object} {type:string, style:string, uuid:string, from:{name:string, metadata:object, endpoint:string, uuid:string}, to:{name:string, metadata:object, endpoint:string, uuid:string}}
+ * @returns {Object} {type:string, style:string, uuid:string, 
+ *   from:{name:string, metadata:object, endpoint:string, uuid:string}, 
+ *   to:{name:string, metadata:object, endpoint:string, uuid:string}}
  */
 Route.prototype.toMap = function(){
   var out = {type:this.type,
@@ -242,7 +272,7 @@ Route.matchRegexpChain = function(regexps, strings){
     }
   }
   return matches;
-}
+};
 
 /**
  *
@@ -272,7 +302,7 @@ Route.metadataRegexpMatch = function(mRegexp, mClient){
       metadataI >= 0 && propMatched;
       metadataI--){
     var key = clientKeys[metadataI];
-    var propMatched = false;
+    propMatched = false;
     //see if there is a regex in the RegExp array that matches this key
     for(var regexpI = mRegexp.length - 1;
         regexpI >= 0;

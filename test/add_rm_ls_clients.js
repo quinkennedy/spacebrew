@@ -2,7 +2,6 @@
 var chai = require('chai');
 var expect = chai.expect;
 var Spacebrew = require('../core.js');
-var Client = require('../leaf.js');
 var D = require('./data.js');
 var d = new D();
 

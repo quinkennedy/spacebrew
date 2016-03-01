@@ -10,12 +10,19 @@ var uuid = require('node-uuid');
  * @constructor
  * @param name {string}
  * @param subscribers {Array} expected format [{name:string, type:string},...]
- * @param publishers {Array} expected format [{name:string, type:string, default:],...]
- * @param sendCallback {function} function that will be called when a message is being sent to this Client
+ * @param publishers {Array} expected format 
+ *   [{name:string, type:string, default:],...]
+ * @param sendCallback {function} function that will be called 
+ *   when a message is being sent to this Client
  * @param description {string} human-readable description
  * @param metadata {Object} free-form-ish metadata map
  */
-var Leaf = function(name, subscribers, publishers, sendCallback, description, metadata){
+var Leaf = function(name, 
+                    subscribers, 
+                    publishers, 
+                    sendCallback, 
+                    description, 
+                    metadata){
   
   /** the string name of this client */
   this.name = name = '' + name;
@@ -61,7 +68,8 @@ Leaf.prototype.matches = function(otherClient){
 
 /**
  * Gets this leaf's data as a simple map
- * @returns {Object} {name:string, description:string, subscribers:Array, publishers:Array, metadata:Object}
+ * @returns {Object} {name:string, description:string, 
+ *   subscribers:Array, publishers:Array, metadata:Object}
  */
 Leaf.prototype.toMap = function(){
   var map = {name:this.name,
@@ -124,7 +132,8 @@ Leaf.prototype.addConnection = function(publisher,
 /**
  * Returns an array of connection definitions specifying which 
  *  of this client's publishers are connected to which subscribers.
- * @return {Array} [{type:string, from:{uuid:string, endpoint:string}, to:{uuid:string, endpoint:string}, routes:[string,...]},...]
+ * @return {Array} [{type:string, from:{uuid:string, endpoint:string}, 
+ *   to:{uuid:string, endpoint:string}, routes:[string,...]},...]
  */
 Leaf.prototype.getOutgoingConnections = function(){
   var pubClient = this;
@@ -171,10 +180,12 @@ Leaf.prototype.getOutgoingConnections = function(){
  */
 Leaf.cleanSubscribers = function(subscriberList){
   var subs = [];
-  for(var i = 0; Array.isArray(subscriberList) && i < subscriberList.length; i++){
-    var curr = subscriberList[i];
-    subs.push({name:'' + curr.name, 
-               type:'' + curr.type});
+  for(var subscriberI = 0; 
+      Array.isArray(subscriberList) && subscriberI < subscriberList.length; 
+      subscriberI++){
+    var subscriber = subscriberList[subscriberI];
+    subs.push({name:'' + subscriber.name, 
+               type:'' + subscriber.type});
   }
   return subs;
 };
@@ -237,7 +248,8 @@ Leaf.cleanMetadata = function(metadata){
 };
 
 /**
- * Returns true if both metadata objects have the same keys and associated values
+ * Returns true if both metadata objects 
+ *   have the same keys and associated values
  * @param mA {Object} A metadata object to compare against
  * @param mB {Object} A metadata object to compare against
  * @return {boolean} true if both metadata objects have 

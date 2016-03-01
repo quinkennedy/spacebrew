@@ -46,6 +46,61 @@ Manager.prototype.addClient = function(client){
   return clientUnique;
 };
 
+Manager.prototype.connectRoutePubClient = function(route, pubClient){
+  var publisher,
+      publisherI,
+      subClient,
+      subClientI,
+      subscriber,
+      subscriberI;
+
+  //if this client matches the route's "from" client
+  if(route.matchesFromClient(pubClient)){
+    //go through each publisher on this client
+    for(publisherI = pubClient.publishers.length - 1; 
+        publisherI >= 0; 
+        publisherI--){
+      publisher = pubClient.publishers[publisherI]; 
+      //if this publisher matches the route's "from" endpoint
+      if(route.matchesPublisher(pubClient, publisher)){
+        //then associate this publisher with this route
+        publisher.routes.push(route);
+        route.from.matched.push({client:pubClient,
+                                 endpoint:publisher});
+        //now because we want to handle pattern-matching with
+        // back-referencing from subscribers 
+        // to captured patterns in publishers
+        // we have to go through all subscribers in-context.
+
+        //so for each registered client
+        for(subClientI = this.clients.length - 1; 
+            subClientI >= 0;
+            subClientI--){
+          subClient = this.clients[subClientI];
+          //if this client matches the route's "to" client
+          if(route.matchesPubToClient(pubClient, publisher, subClient)){
+            //for each subscriber in that client
+            for(subscriberI = subClient.subscribers.length - 1;
+                subscriberI >= 0;
+                subscriberI--){
+              subscriber = subClient.subscribers[subscriberI];
+              //see if the subscriber matches this route/publisher combo
+              if(route.matchesPair(pubClient, publisher, 
+                                   subClient, subscriber)){
+                //and connect the subscriber to this publisher
+                pubClient.addConnection(publisher, 
+                                        subClient, 
+                                        subscriber, 
+                                        route);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+};
+
 /**
  * Goes through the current list of routes and connects 
  *   this client's endpoints to other endpoints based on 
@@ -60,7 +115,7 @@ Manager.prototype.connectClient = function(client){
       route,
       routeI,
       subClient,
-      subClientI,
+      //subClientI,
       subscriber,
       subscriberI;
 
@@ -69,49 +124,10 @@ Manager.prototype.connectClient = function(client){
   //for each route
   for(routeI = this.routes.length - 1; routeI >= 0; routeI--){
     route = this.routes[routeI];
-    //if this client matches the route's "from" client
-    if(route.matchesFromClient(pubClient)){
-      //go through each publisher on this client
-      for(publisherI = pubClient.publishers.length - 1; 
-          publisherI >= 0; 
-          publisherI--){
-        publisher = pubClient.publishers[publisherI]; 
-        //if this publisher matches the route's "from" endpoint
-        if(route.matchesPublisher(pubClient, publisher)){
-          //then associate this publisher with this route
-          publisher.routes.push(route);
-          route.from.matched.push({client:pubClient,
-                                   endpoint:publisher});
-          //TODO
-          //now because we want to handle pattern-matching with
-          // back-referencing from subscribers 
-          // to captured patterns in publishers
-          // we have to go through all subscribers in-context.
+    //establish all connections between this client's publishers and
+    // appropriate subscribers
+    this.connectRoutePubClient(route, pubClient);
 
-          //so for each registered client
-          for(subClientI = this.clients.length - 1; 
-              subClientI >= 0;
-              subClientI--){
-            subClient = this.clients[subClientI];
-            //if this client matches the route's "to" client
-            if(route.matchesPubToClient(pubClient, publisher, subClient)){
-              //for each subscriber in that client
-              for(subscriberI = subClient.subscribers.length - 1;
-                  subscriberI >= 0;
-                  subscriberI--){
-                subscriber = subClient.subscribers[subscriberI];
-                //see if the subscriber matches this route/publisher combo
-                if(route.matchesPair(pubClient, publisher, 
-                                     subClient, subscriber)){
-                  //and connect the subscriber to this publisher
-                  pubClient.addConnection(publisher, subClient, subscriber, route);
-                }
-              }
-            }
-          }
-        }
-      }
-    }
     //now check if this client's subscribers match this route
     subClient = client;
     
@@ -157,23 +173,77 @@ Manager.prototype.indexOfClient = function(client){
 };
 
 /**
- * Removes the specified client from the server
+ * Removes the specified client from the server an cleans up
+ *   any associated pub/sub connections.
  * @param client {Object|string|Leaf} details about the client.
  *   {name:string, metadata:Object}
  * @returns {boolean} true iff a client was removed.
  */
 Manager.prototype.removeClient = function(client){
-  var i = this.indexOfClient(client);
-  if (i >= 0){
-    this.clients.splice(i, 1);
+  var pubClient,
+      pubClientI,
+      publisher,
+      publisherI,
+      connection,
+      connectionI,
+      route,
+      routeI;
+
+  pubClientI = this.indexOfClient(client);
+  
+  if (pubClientI >= 0){
+    pubClient = this.clients[pubClientI];
+    //for each publisher
+    for(publisherI = pubClient.publishers.length - 1;
+        publisherI >= 0;
+        publisherI--){
+      publisher = pubClient.publishers[publisherI];
+      //for each connection this publisher is involved in
+      for(connectionI = publisher.connectedTo.length - 1;
+          connectionI >= 0;
+          connectionI--){
+        connection = publisher.connectedTo[connectionI];
+        //for each specifying route
+        for(routeI = connection.routes.length - 1;
+            routeI >= 0;
+            routeI--){
+          route = connection.routes[routeI];
+          //unregister this connection from this route
+          // OH! actually connections are not registered with routes
+        }
+        connection.routes = [];
+      }
+      publisher.connectedTo = [];
+      //for each route this connection matches
+      for(routeI = publisher.routes.length - 1;
+          routeI >= 0;
+          routeI--){
+        route = publisher.routes[routeI];
+        //unregister this publisher from this route
+        for(var matchedI = route.from.matched.length - 1;
+            matchedI >= 0;
+            matchedI--){
+          var matched = route.from.matched[matchedI];
+          if (matched.client.matches(pubClient) &&
+              matched.endpoint.name === publisher.name &&
+              matched.endpoint.type === publisher.type){
+            route.from.matched.splice(matchedI, 1);
+            break;
+          }
+        }
+      }
+      publisher.routes = [];
+    }
+    this.clients.splice(pubClientI, 1);
   }
-  return (i >= 0);
+  return (pubClientI >= 0);
 };
 
 /**
  * Gets an array detailing the clients currently registered with this server.
  * @returns {Array} An array of client info: 
- *   [{name:string, description:string, subscribers:Array, publishers:Array, metadata:Object},...]
+ *   [{name:string, description:string, subscribers:Array, 
+ *     publishers:Array, metadata:Object},...]
  */
 Manager.prototype.getClients = function(){
   var clients = [];
@@ -201,6 +271,29 @@ Manager.prototype.indexOfRoute = function(route){
 };
 
 /**
+ * Goes through all clients and creates any connections that match
+ *   this route.
+ * @param {Route} route The route to create connections with
+ */
+Manager.prototype.connectRoute = function(route){
+  var pubClient,
+      pubClientI;
+  //First we will go through all clients and associate their publishers.
+  // Then we will go through all clients and check their subscribers
+  // against the associated publishers.
+  
+  //for each registered client
+  for(pubClientI = this.clients.length - 1;
+      pubClientI >= 0;
+      pubClientI--){
+    pubClient = this.clients[pubClientI];
+    //connect this client's publishers to all 
+    // appropriate registered subscribers
+    this.connectRoutePubClient(route, pubClient);
+  }
+};
+
+/**
  * Adds a route to the server
  * @param route {Route} The route object to add. 
  * @returns {boolean} true iff the provided route is added. 
@@ -213,6 +306,7 @@ Manager.prototype.addRoute = function(route){
   }
   var routeUnique = (this.indexOfRoute(route) === -1);
   if (routeUnique){
+    this.connectRoute(route);
     this.routes.push(route);
   }
   return routeUnique;
@@ -234,7 +328,9 @@ Manager.prototype.removeRoute = function(route){
 /**
  * Gets an array detailing the routes currently registered with this server.
  * @returns {Array} An array of route info: 
- *   [{type:string, style:string, uuid:string, from:{name:string, metadata:object, endpoint:string}, to:{name:string, metadata:object, endpoint:string}},...]
+ *   [{type:string, style:string, uuid:string, 
+ *     from:{name:string, metadata:object, endpoint:string}, 
+ *     to:{name:string, metadata:object, endpoint:string}},...]
  */
 Manager.prototype.getRoutes = function(){
   var routes = [];
@@ -246,9 +342,11 @@ Manager.prototype.getRoutes = function(){
 };
 
 /**
- * Gets an array of specific publisher/subscriber connections that currently exist.
+ * Gets an array of specific publisher/subscriber 
+ *   connections that currently exist.
  * @returns {Array} an array of pub/sub connection info:
- *   [{type:string, from:{uuid:string, endpoint:string}, to:{uuid:string, endpoint:string}, routes:[string,...]}]
+ *   [{type:string, from:{uuid:string, endpoint:string}, 
+ *     to:{uuid:string, endpoint:string}, routes:[string,...]}]
  */
 Manager.prototype.getConnections = function(){
   var connections = [];
@@ -266,6 +364,36 @@ Manager.prototype.getConnections = function(){
   }
 
   return connections;
+};
+
+Manager.prototype.published = function(pubClient, pubName, type, message){
+  //get the actual client object from the registered clients
+  var pubClientI = this.indexOfClient(pubClient);
+  if (pubClientI >= 0){
+    pubClient = this.clients[pubClientI];
+    var publisher;
+    //get the appropriate publisher from this client
+    for (var publisherI = pubClient.publishers.length - 1;
+         publisherI >= 0 && publisher === undefined;
+         publisherI--){
+      var currPub = pubClient.publishers[publisherI];
+      if (currPub.name === pubName && currPub.type === type){
+        publisher = currPub;
+      }
+    }
+    if (publisher !== undefined){
+      //for each connected subscriber
+      for(var connectionI = publisher.connectedTo.length -1;
+          connectionI >= 0;
+          connectionI--){
+        var connection = publisher.connectedTo[connectionI];
+        //forward the message to them
+        connection.client.sendCallback(connection.endpoint.name,
+                                       connection.endpoint.type,
+                                       message);
+      }
+    }
+  }
 };
 
 module.exports = Manager;

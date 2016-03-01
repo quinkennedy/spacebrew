@@ -12,6 +12,7 @@
 	"smarttabs":true,
 	"sub":true,
 	"supernew":true,
-	"laxcomma":true
+	"laxcomma":true,
+    "maxlen":80
 }
 

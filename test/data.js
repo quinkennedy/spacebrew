@@ -84,11 +84,12 @@ Data.initRoute = function(data){
                    data.to.endpoint);
 };
 
-Data.initClient = function(data){
+Data.initClient = function(data, callback){
+  callback = callback || function(){};
   return new Leaf(data.name,
                   data.subscribers,
                   data.publishers,
-                  function(){},
+                  callback,
                   data.description,
                   data.metadata);
 };

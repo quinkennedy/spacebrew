@@ -80,7 +80,9 @@ describe('Route', function(){
           }
           var formattedArgs = formatArgs.apply(this, currArgs);
           expect(applyToRoute.bind(Route, formattedArgs)).
-            to.throw('type, fromId.name, publisherName, toId.name, and subscriberName must all be RegExp objects when style is regexp');
+            to.throw('type, fromId.name, publisherName, ' + 
+                     'toId.name, and subscriberName must all ' +
+                     'be RegExp objects when style is regexp');
         }
       }
     );
@@ -111,7 +113,9 @@ describe('Route', function(){
           }
           var formattedArgs = formatArgs.apply(this, currArgs);
           expect(applyToRoute.bind(Route, formattedArgs)).
-            to.throw('type, fromId.name, publisherName, toId.name, and subscriberName must all be strings when style is string');
+            to.throw('type, fromId.name, publisherName, ' +
+                     'toId.name, and subscriberName must ' + 
+                     'all be strings when style is string');
         }
       }
     );
@@ -131,9 +135,6 @@ describe('Route', function(){
   });
   describe('route/route matching', function(){
     var stringRoute = D.initRoute(d.stringRoute);
-    var regexpRoute = D.initRoute(d.regexpRoute);
-    var uuidRoute = D.initRoute(d.uuidRoute);
-
 
     it('match a route using an Object where all the information matches',
       function(){
@@ -166,7 +167,7 @@ describe('Route', function(){
       });
       it('returns an empty array if there are no captured groups',
         function(){
-          match = /h/.exec('hello');
+          var match = /h/.exec('hello');
           expect(match).to.have.lengthOf(1);
           expect(Route.getBackref(match)).to.deep.equal([]);
         }
@@ -267,7 +268,7 @@ describe('Route', function(){
         expect(Route.metadataRegexpMatch(mreEmpty, {a:'a'})).to.be.false;
         expect(Route.metadataRegexpMatch(mreAll, {})).to.be.false;
       });
-      it('using Regular Expressions that match everything, matches all non-empty metadata definitions',
+      it('.* RegExp matches non-empty metadata',
         function(){
           expect(Route.metadataRegexpMatch(mreAll, {hi:'bye'})).to.be.true;
           expect(Route.metadataRegexpMatch(mreAll, {hi:'bye', one:'two'})).
@@ -318,36 +319,65 @@ describe('Route', function(){
     var client2 = D.initClient(d.clientWithEndpoints2);
     describe('matchesFromClient', function(){
     //signature: matchesFromClient(pubClient)
-      it('', function(){
+      it('true if the client matches the "from" definition', function(){
         expect(route1.matchesFromClient(client1)).to.be.true;
         expect(route1.matchesFromClient(client2)).to.be.false;
       });
     });
     describe('matchesPublisher', function(){
       //signature: matchesPublisher(pubClient, publisher)
-      it('', function(){
+      it('true when all match', function(){
         expect(route1.matchesPublisher(client1, client1.publishers[0])).
           to.be.true;
         expect(route1.matchesPublisher(client2, client2.publishers[0])).
           to.be.false;
       });
+      it('client and publisher must match', function(){
+        expect(route1.matchesPublisher(client1, client2.publishers[0])).
+          to.be.false;
+        expect(route1.matchesPublisher(client2, client1.publishers[0])).
+          to.be.false;
+      });
     });
     describe('matchesPubToClient', function(){
       //signature: matchesPubToClient(pubClient, publisher, subClient);
-      it('', function(){
-        expect(route1.matchesPubToClient(client1, client1.publishers[0], client2)).
+      it('true when all match', function(){
+        expect(route1.matchesPubToClient(client1, client1.publishers[0], 
+                                         client2)).
           to.be.true;
-        expect(route1.matchesPubToClient(client2, client2.publishers[0], client1)).
+        expect(route1.matchesPubToClient(client2, client2.publishers[0], 
+                                         client1)).
+          to.be.false;
+      });
+      it('false if any one doesn\'t match its particular role', function(){
+        expect(route1.matchesPubToClient(client2, client1.publishers[0], 
+                                         client2)).
+          to.be.false;
+        expect(route1.matchesPubToClient(client1, client2.publishers[0], 
+                                         client2)).
+          to.be.false;
+        expect(route1.matchesPubToClient(client1, client1.publishers[0], 
+                                         client1)).
           to.be.false;
       });
     });
     describe('matchesPair', function(){
       //signature: matchesPair(pubClient, publisher, subClient, subscriber);
-      it('', function(){
+      it('true when all match', function(){
         expect(route1.matchesPair(client1, client1.publishers[0],
                                   client2, client2.subscribers[0])).to.be.true;
         expect(route1.matchesPair(client2, client2.publishers[0],
                                   client1, client1.subscribers[0])).to.be.false;
+      });
+      it('false if any param doesn\'t match its particular role', function(){
+        expect(route1.matchesPair(client2, client1.publishers[0],
+                                  client2, client2.subscribers[0])).to.be.false;
+        expect(route1.matchesPair(client1, client2.publishers[0],
+                                  client2, client2.subscribers[0])).to.be.false;
+        expect(route1.matchesPair(client1, client1.publishers[0],
+                                  client1, client2.subscribers[0])).to.be.false;
+        expect(route1.matchesPair(client1, client1.publishers[0],
+                                  client2, client1.subscribers[0])).to.be.false;
       });
     });
   });
