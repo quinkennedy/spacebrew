@@ -103,10 +103,10 @@ Leaf.prototype.toMap = function(){
  *   Must be a subscriber registered in the subClient.
  * @param {Route} route The route that matches this connection.
  */
-Leaf.prototype.addConnection = function(publisher, 
-                                        subClient, 
-                                        subscriber, 
-                                        route){
+Leaf.prototype.addOutConnection = function(publisher, 
+                                           subClient, 
+                                           subscriber, 
+                                           route){
   var added = false;
   //go through all connections registered with the specified publisher.
   for(var connectionI = publisher.connectedTo.length - 1;
@@ -126,6 +126,43 @@ Leaf.prototype.addConnection = function(publisher,
     publisher.connectedTo.push({client:subClient,
                                 endpoint:subscriber,
                                 routes:[route]});
+  }
+};
+
+/**
+ * adds the specified connection to the provided subscriber
+ *   This method ensures that duplicate connections are not defined.
+ * @param {Leaf} pubClient The client that contains the publisher endpoint
+ *   of this connection.
+ * @param {object} publisher The publisher endpoint of the connection.
+ *   This must be a publisher registered in the pubClient.
+ * @param {object} subscriber The subscriber endpoint of the connection.
+ *   Must be a subscriber registered in this Client.
+ * @param {Route} route The route that matches this connection.
+ */
+Leaf.prototype.addInConnection = function(pubClient,
+                                           publisher, 
+                                           subscriber, 
+                                           route){
+  var added = false;
+  //go through all connections registered with the specified subscriber.
+  for(var connectionI = subscriber.connectedTo.length - 1;
+      connectionI >= 0 && !added;
+      connectionI--){
+    var connection = subscriber.connectedTo[connectionI];
+    //if there are any copies, add the route to that existing connection.
+    if (connection.client === pubClient &&
+        connection.endpoint === publisher){
+      connection.routes.push(route);
+      added = true;
+    }
+  }
+
+  //otherwise, create a new connection.
+  if(!added){
+    subscriber.connectedTo.push({client:pubClient,
+                                 endpoint:publisher,
+                                 routes:[route]});
   }
 };
 
@@ -185,7 +222,8 @@ Leaf.cleanSubscribers = function(subscriberList){
       subscriberI++){
     var subscriber = subscriberList[subscriberI];
     subs.push({name:'' + subscriber.name, 
-               type:'' + subscriber.type});
+               type:'' + subscriber.type,
+               connectedTo:[]});
   }
   return subs;
 };

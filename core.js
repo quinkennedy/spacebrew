@@ -88,10 +88,15 @@ Manager.prototype.connectRoutePubClient = function(route, pubClient){
               if(route.matchesPair(pubClient, publisher, 
                                    subClient, subscriber)){
                 //and connect the subscriber to this publisher
-                pubClient.addConnection(publisher, 
-                                        subClient, 
-                                        subscriber, 
-                                        route);
+                pubClient.addOutConnection(publisher, 
+                                           subClient, 
+                                           subscriber, 
+                                           route);
+                //and connect the publisher to this subscriber
+                subClient.addInConnection(pubClient,
+                                          publisher,
+                                          subscriber,
+                                          route);
               }
             }
           }
@@ -148,7 +153,9 @@ Manager.prototype.connectClient = function(client){
           if(route.matchesPair(pubClient, publisher,
                                subClient, subscriber)){
             //connect the subscriber to this publisher
-            pubClient.addConnection(publisher, subClient, subscriber, route);
+            pubClient.addOutConnection(publisher, subClient, subscriber, route);
+            //and add the connection the other way...
+            subClient.addInConnection(pubClient, publisher, subscriber, route);
           }
         }
       }
@@ -173,6 +180,134 @@ Manager.prototype.indexOfClient = function(client){
 };
 
 /**
+ * cleans up both sides of this pub/sub connection
+ * @param {Object} sourceEndpoint The publisher or subscriber that
+ *   the connection is defined in.
+ * @param {Object} sourceConnection The connection associated with the
+ *   sourceEndpoint that we want to clean up.
+ * @throws Throws an error if the connection is not registered with the
+ *   provided endpoint.
+ */
+Manager.breakConnection = function(sourceEndpoint, sourceConnection){
+  var destEndpoint,
+      destConnection,
+      destConnectI,
+      sourceConnectI,
+      cleanedConn;
+
+  //remove the connection from this endpoint
+  cleanedConn = false;
+  //for each connection in this endpoint
+  for(sourceConnectI = sourceEndpoint.connectedTo.length - 1;
+      sourceConnectI >= 0 && !cleanedConn;
+      sourceConnectI--){
+    if (sourceEndpoint.connectedTo[sourceConnectI] === sourceConnection){
+      sourceEndpoint.connectedTo.splice(sourceConnectI, 1);
+      cleanedConn = true;
+    }
+  }
+  //if we didn't find the connection in this endpoint
+  if (!cleanedConn){
+    throw new Error(
+      'sourceConnection must be registered with sourceEndpoint');
+  }
+
+  //and break the connection from the other side too
+  destEndpoint = sourceConnection.endpoint;
+  cleanedConn = false;
+  //for each connection the other endpoint is involved in
+  for(destConnectI = destEndpoint.connectedTo.length - 1;
+      destConnectI >= 0 && !cleanedConn;
+      destConnectI--){
+    destConnection = destEndpoint.connectedTo[destConnectI];
+    //if the OTHER other endpoint matches the fromEndpoint
+    if (destConnection.endpoint === sourceEndpoint){
+      //then remove the connection
+      destEndpoint.connectedTo.splice(destConnectI, 1);
+      //there should be only one occurance
+      cleanedConn = true;
+    }
+  }
+  //if we didn't find the connection in the other endpoint,
+  if (!cleanedConn){
+    //TODO: log warning?
+  }
+  /*
+   * We don't need to clean up each specifying route
+   * since routes don't track connections, just matched publishers
+   *  //for each specifying route
+   *  for(routeI = fromConnection.routes.length - 1;
+   *      routeI >= 0;
+   *      routeI--){
+   *    route = fromConnection.routes[routeI];
+   *    //unregister this connection from this route
+   *    // OH! actually connections are not registered with routes
+   *  }*/
+  sourceConnection.routes = [];
+};
+
+/**
+ * cleans up both sides of all connections associated with
+ *   the provided set of endpoints.
+ * @param {Array} fromEndpoints an array of publishers or subscribers
+ *   to clean up
+ */
+Manager.cleanConnectionsFrom = function(fromEndpoints){
+  var fromEndpoint,
+      fromEndpointI,
+      fromConnection,
+      fromConnectI;
+
+  //for each endpoint
+  for(fromEndpointI = fromEndpoints.length - 1;
+      fromEndpointI >= 0;
+      fromEndpointI--){
+    fromEndpoint = fromEndpoints[fromEndpointI];
+    //for each connection this endpoint is involved in
+    for(fromConnectI = fromEndpoint.connectedTo.length - 1;
+        fromConnectI >= 0;
+        fromConnectI--){
+      fromConnection = fromEndpoint.connectedTo[fromConnectI];
+      //break the connection
+      Manager.breakConnection(fromEndpoint, fromConnection);
+//      //break the connection from the other side too
+//      toEndpoint = fromConnection.endpoint;
+//      var cleanedTo = false;
+//      //for each connection the other endpoint is involved in
+//      for(toConnectI = toEndpoint.connectedTo.length -1;
+//          toConnectI >= 0 && !cleanedTo;
+//          toConnectI--){
+//        toConnection = toEndpoint.connectedTo[toConnectI];
+//        //if the OTHER other endpoint matches the fromEndpoint
+//        if (toConnection.endpoint === fromEndpoint){
+//          //then remove the connection
+//          toEndpoint.connectedTo.splice(toConnectI, 1);
+//          //there should be only one occurance
+//          cleanedTo = true;
+//        }
+//      }
+//      //if we didn't find the connection in the other endpoint,
+//      if (!cleanedTo){
+//        //TODO: log warning?
+//      }
+//      /*
+//       * We don't need to clean up each specifying route
+//       * since routes don't track connections, just matched publishers
+//       *  //for each specifying route
+//       *  for(routeI = fromConnection.routes.length - 1;
+//       *      routeI >= 0;
+//       *      routeI--){
+//       *    route = fromConnection.routes[routeI];
+//       *    //unregister this connection from this route
+//       *    // OH! actually connections are not registered with routes
+//       *  }*/
+//      fromConnection.routes = [];
+    }
+    fromEndpoint.connectedTo = [];
+  }
+};
+
+/**
  * Removes the specified client from the server an cleans up
  *   any associated pub/sub connections.
  * @param client {Object|string|Leaf} details about the client.
@@ -181,39 +316,69 @@ Manager.prototype.indexOfClient = function(client){
  */
 Manager.prototype.removeClient = function(client){
   var pubClient,
-      pubClientI,
       publisher,
       publisherI,
-      connection,
-      connectionI,
+      subClient,
       route,
-      routeI;
+      routeI,
+      clientI;
 
-  pubClientI = this.indexOfClient(client);
+  clientI = this.indexOfClient(client);
   
-  if (pubClientI >= 0){
-    pubClient = this.clients[pubClientI];
+  if (clientI >= 0){
+    //Clean up all connections involving this client's subscribers
+    subClient = this.clients[clientI];
+    Manager.cleanConnectionsFrom(subClient.subscribers);
+
+    //Clean up all connections involving this client's publishers
+    pubClient = subClient;
+    Manager.cleanConnectionsFrom(pubClient.publishers);
+
+    //Clean up all route associations with this client's publishers
     //for each publisher
     for(publisherI = pubClient.publishers.length - 1;
         publisherI >= 0;
         publisherI--){
       publisher = pubClient.publishers[publisherI];
-      //for each connection this publisher is involved in
-      for(connectionI = publisher.connectedTo.length - 1;
-          connectionI >= 0;
-          connectionI--){
-        connection = publisher.connectedTo[connectionI];
-        //for each specifying route
-        for(routeI = connection.routes.length - 1;
-            routeI >= 0;
-            routeI--){
-          route = connection.routes[routeI];
-          //unregister this connection from this route
-          // OH! actually connections are not registered with routes
-        }
-        connection.routes = [];
-      }
-      publisher.connectedTo = [];
+//      //for each connection this publisher is involved in
+//      for(pubConnectI = publisher.connectedTo.length - 1;
+//          pubConnectI >= 0;
+//          pubConnectI--){
+//        pubConnection = publisher.connectedTo[pubConnectI];
+//        //break the connection from the subscriber side too
+//        subscriber = pubConnection.endpoint;
+//        var cleanedSubscriber = false;
+//        //for each connection this subscriber is involved in
+//        for(subConnectI = subscriber.connectedTo.length -1;
+//            subConnectI >= 0 && !cleanedSubscriber;
+//            subConnectI--){
+//          subConnection = subscriber.connectedTo[subConnectI];
+//          //if the endpoint matches this publisher
+//          if (subConnection.endpoint === publisher){
+//            //then remove the connection
+//            subscriber.connectedTo.splice(subConnectI, 1);
+//            //there should be only one occurance
+//            cleanedSubscriber = true;
+//          }
+//        }
+//        //if we didn't find the connection in the subscriber,
+//        if (!cleanedSubscriber){
+//          //TODO: log warning?
+//        }
+//        /*
+//         * We don't need to clean up each specifying route
+//         * since routes don't track connections, just matched publishers
+//         *  //for each specifying route
+//         *  for(routeI = pubConnection.routes.length - 1;
+//         *      routeI >= 0;
+//         *      routeI--){
+//         *    route = pubConnection.routes[routeI];
+//         *    //unregister this connection from this route
+//         *    // OH! actually connections are not registered with routes
+//         *  }*/
+//        pubConnection.routes = [];
+//      }
+//      publisher.connectedTo = [];
       //for each route this connection matches
       for(routeI = publisher.routes.length - 1;
           routeI >= 0;
@@ -234,9 +399,9 @@ Manager.prototype.removeClient = function(client){
       }
       publisher.routes = [];
     }
-    this.clients.splice(pubClientI, 1);
+    this.clients.splice(clientI, 1);
   }
-  return (pubClientI >= 0);
+  return (clientI >= 0);
 };
 
 /**
@@ -318,11 +483,72 @@ Manager.prototype.addRoute = function(route){
  * @returns {boolean} true iff a route was removed.
  */
 Manager.prototype.removeRoute = function(route){
-  var i = this.indexOfRoute(route);
-  if (i >= 0){
-    this.routes.splice(i, 1);
+  var routeI,
+      match,
+      matchI,
+      publisher,
+      connection,
+      connectionI,
+      connectRouteI,
+      pubRouteI;
+
+  //get the referenced Route instance from the registered routes
+  routeI = this.indexOfRoute(route);
+  if (routeI >= 0){
+    route = this.routes[routeI];
+    //Clean up publisher matches and associated pub/sub connections
+    //for each matched publisher
+    for(matchI = route.from.matched.length - 1;
+        matchI >= 0;
+        matchI--){
+      match = route.from.matched[matchI];
+      publisher = match.endpoint;
+      //dis-associate the route from this publisher
+      var disassociated = false;
+      //for each route associated with this publisher
+      for(pubRouteI = publisher.routes.length - 1;
+          pubRouteI >= 0 && !disassociated;
+          pubRouteI--){
+        //if this publisher/route association includes this route
+        if (publisher.routes[pubRouteI] === route){
+          //remove the association
+          publisher.routes.splice(pubRouteI, 1);
+          //we should only have one matching association
+          disassociated = true;
+        }
+      }
+      //if we didn't find a matching publisher/route association
+      if (!disassociated){
+        //TODO: log warning?
+      }
+      //now go through each connection associated with this publisher
+      for(connectionI = publisher.connectedTo.length - 1;
+          connectionI >= 0;
+          connectionI--){
+        connection = publisher.connectedTo[connectionI];
+        disassociated = false;
+        //for each route associated with this connection
+        for(connectRouteI = connection.routes.length - 1;
+            connectRouteI >= 0 && !disassociated;
+            connectRouteI--){
+          //if the connection is associated with this route
+          if (connection.routes[connectRouteI] === route){
+            //remove the association
+            connection.routes.splice(connectRouteI, 1);
+            //there should only be one association
+            disassociated = true;
+            //if there are no other associations
+            if (connection.routes.length === 0){
+              //then we should break the connection
+              Manager.breakConnection(publisher, connection);
+            }
+          }
+        }
+      }
+    }
+    this.routes.splice(routeI, 1);
   }
-  return (i >= 0);
+  return (routeI >= 0);
 };
 
 /**
