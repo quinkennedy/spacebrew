@@ -57,13 +57,13 @@ describe('Route', function(){
       function(){
         var formatArgs = 
           function(style, type, pubName, pubEndpoint, subName, subEndpoint){
-           return [style, 
-                   type, 
-                   {name:pubName, metadata:[]}, 
-                   pubEndpoint, 
-                   {name:subName, metadata:[]}, 
-                   subEndpoint];
-        };
+            return [style, 
+                    type, 
+                    {name:pubName, metadata:[]}, 
+                    pubEndpoint, 
+                    {name:subName, metadata:[]}, 
+                    subEndpoint];
+          };
         var testArgs = [Route.styles.REGEXP, 
                         /type/, 
                         /client1/, 
@@ -96,7 +96,7 @@ describe('Route', function(){
                     pubEndpoint, 
                     {name:subName, metadata:{}}, 
                     subEndpoint];
-        };
+          };
         var testArgs = [Route.styles.STRING, 
                         'type', 
                         'client1', 
@@ -161,7 +161,7 @@ describe('Route', function(){
           to.deep.equal(['l','','l']);
       });
       it('returns an empty array if nothing is passed in', function(){
-	    var match = /w/.exec('hello');
+        var match = /w/.exec('hello');
         expect(match).to.be.null;
         expect(Route.getBackref(match)).to.deep.equal([]);
       });

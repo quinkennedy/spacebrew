@@ -6,15 +6,15 @@ var D = require('./data.js');
 var d = new D();
 
 var cleanEndpointsEmptyTests = function(cleanFunc){
-      expect(cleanFunc()).to.deep.equal([]);
-      expect(cleanFunc(undefined)).to.deep.equal([]); 
-      expect(cleanFunc(null)).to.deep.equal([]);
-      expect(cleanFunc(1)).to.deep.equal([]);
-      expect(cleanFunc('hi')).to.deep.equal([]);
-      expect(cleanFunc({})).to.deep.equal([]);
-      expect(cleanFunc({name:'sub', type:'string'})).to.deep.equal([]);
-      expect(cleanFunc([])).to.deep.equal([]);
-      expect(cleanFunc({1:{name:'stub', type:'string'}})).to.deep.equal([]);
+  expect(cleanFunc()).to.deep.equal([]);
+  expect(cleanFunc(undefined)).to.deep.equal([]); 
+  expect(cleanFunc(null)).to.deep.equal([]);
+  expect(cleanFunc(1)).to.deep.equal([]);
+  expect(cleanFunc('hi')).to.deep.equal([]);
+  expect(cleanFunc({})).to.deep.equal([]);
+  expect(cleanFunc({name:'sub', type:'string'})).to.deep.equal([]);
+  expect(cleanFunc([])).to.deep.equal([]);
+  expect(cleanFunc({1:{name:'stub', type:'string'}})).to.deep.equal([]);
 };
 
 describe('Leaf', function(){

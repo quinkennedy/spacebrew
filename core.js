@@ -5,6 +5,7 @@
 
 var Leaf = require('./leaf.js');
 var Route = require('./route.js');
+var Admin = require('./admin.js');
 
 /**
  * Creates an instance of a Spacebrew Manager
@@ -44,6 +45,26 @@ Manager.prototype.addClient = function(client){
     this.clients.push(client);
   }
   return clientUnique;
+};
+
+Manager.prototype.addAdmin = function(admin){
+  //make sure the admin is the proper type
+  if (!(admin instanceof Admin)){
+    throw new TypeError('argument must be an Admin instance');
+  }
+  //make sure there is not a duplicate admin already registered
+  var adminUnique = (this.indexOfAdmin(admin) === -1);
+  if (adminUnique){
+    //send current state to this admin
+    admin.sendCallback(Admin.messageTypes.ADD, 
+                       {clients:this.getClients(),
+                        routes:this.getRoutes(),
+                        connections: this.getConnections()});
+
+    //add the admin to the list of registered admins
+    this.admins.push(admin);
+  }
+  return adminUnique;
 };
 
 Manager.prototype.connectRoutePubClient = function(route, pubClient){
@@ -173,6 +194,22 @@ Manager.prototype.connectClient = function(client){
 Manager.prototype.indexOfClient = function(client){
   for(var i = 0; i < this.clients.length; i++){
     if (this.clients[i].matches(client)){
+      return i;
+    }
+  }
+  return -1;
+};
+
+/**
+ * Gets the index of the first admin that matches the provided admin.
+ * @param client {Object|string|Admin} the admin data to match against
+ * @return {number} The index of the first admin in the router's
+ *   admin list that matches the provided admin. 
+ *   Returns -1 if no match is found.
+ */
+Manager.prototype.indexOfAdmin = function(admin){
+  for(var i = 0; i < this.admins.length; i++){
+    if (this.admins[i].matches(admin)){
       return i;
     }
   }

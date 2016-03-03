@@ -2,39 +2,48 @@
   "name": "spacebrew",
   "version": "0.4.0",
   "description": "A dynamically re-routable software toolkit for choreographing interactive spaces.",
-  "main": "node_server_forever.js",
-  "engines": {
-    "node": ">=0.12.0"
-  },
-  "scripts": {
-    "start": "node node_server_forever.js",
-    "test": "node_modules/mocha/bin/mocha test",
-    "lint": "node_modules/jshint/bin/jshint core.js leaf.js route.js test/; return 0;"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/spacebrew/spacebrew.git"
-  },
   "keywords": [
     "spaces",
     "arduino",
     "serial",
-    "websockets"
+    "websockets",
+    "websocket",
+    "communication",
+    "pubsub"
   ],
-  "author": "LAB at Rockwell Group",
+  "homepage": "http://docs.spacebrew.cc/",
+  "bugs": {
+    "url": "https://github.com/spacebrew/spacebrew/issues"
+  },
   "license": "MIT",
+  "author": "LAB at Rockwell Group",
+  "main": "node_server_forever.js",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/spacebrew/spacebrew.git"
+  },
+  "scripts": {
+    "start": "node node_server_forever.js",
+    "test": "node_modules/mocha/bin/mocha test",
+    "lint": "node_modules/jshint/bin/jshint core.js leaf.js route.js test/; return 0;",
+    "eslint": "node_modules/eslint/bin/eslint.js .; return 0;"
+  },
   "dependencies": {
     "node-uuid": "^1.4.7",
     "ws": "^1.0.1"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "eslint": "^2.2.0",
+    "jsdoc": "^3.4.0",
+    "jshint": "^2.9.1",
+    "mocha": "^2.4.5"
   },
   "optionalDependencies": {
     "bufferutil": "^1.2.1",
     "utf-8-validate": "^1.2.1"
   },
-  "devDependencies": {
-    "chai": "^3.5.0",
-    "jsdoc": "^3.4.0",
-    "jshint": "^2.9.1",
-    "mocha": "^2.4.5"
+  "engines": {
+    "node": ">=0.12.0"
   }
 }

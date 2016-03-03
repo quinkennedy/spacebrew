@@ -33,7 +33,7 @@ describe('Sending/receiving messages', function(){
   });
   it('don\'t call subscribers not associated with the connection', function(){
     var message = 'check this out';
-    var callback = function(sub, type, msg){
+    var callback = function(/*sub, type, msg*/){
       throw new Error('this should not be called');
     };
     var sb = new Spacebrew();
