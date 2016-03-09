@@ -17,7 +17,14 @@ var path = require('path')
 	, ws = require('ws')
     , logger = require('./logger')
     , spacebrew = exports
+    , serveStatic = require('serve-static')
+    , http = require('http')
+    , finalhandler = require('finalhandler')
+    , AJV = require('ajv')
+    , fs = require('fs')
+    , schema = require('./schema.json')
     ;
+
  
 //create a new WebsocketServer
 spacebrew.createServer = function( opts ){
@@ -25,6 +32,11 @@ spacebrew.createServer = function( opts ){
     var expose = {};
     opts = opts || {};
     opts.port = opts.port || 9000;
+    /** 
+     * host can be set to limit which network interfaces to listen on.
+     *   The default is 0.0.0.0 which will listen on all interfaces.
+     *   Setting 'localhost' will only listen on the loopback interface
+     */
     opts.host = opts.host || '0.0.0.0';
     opts.ping = opts.ping || true;
     opts.forceClose = opts.forceClose || false;
@@ -34,15 +46,25 @@ spacebrew.createServer = function( opts ){
 
     logger.log("info", "[createServer] log level set to " + logger.debugLevel);
 
-    /**
-     * startup the websocket server.
-     * The port specifies which port to listen on
-     * The 'host = 0.0.0.0' specifies to listen to ALL incoming traffic, 
-     * not just localhost or a specific IP
-     */
+    //setup validator
+    ajv = AJV();
+    validate = ajv.compile(schema);
+
+    // create basic static folder
+    var serve = serveStatic('admin');
+
+    var server = http.createServer(
+        function(req, res){
+            var done = finalhandler(req, res)
+            serve(req, res, done)
+        }
+    );
+
+    server.listen(opts.port, opts.host);
+
+    // allow websocket connections on the existing server.
     var wss = new ws.Server({
-            port: opts.port,
-            host: opts.host
+            server: server
         });
 
     expose.wss = wss;
@@ -143,11 +165,21 @@ spacebrew.createServer = function( opts ){
             var bValidMessage = false;
             if (message && !flags.binary) {
                 logger.log("info", "[wss.onmessage] text message content: " + message);
+                logger.log('info', "[wss.onmessage] source: " + getClientAddress(connection));
                 // process WebSocket message
                 try {
                     var tMsg = JSON.parse(message);
                 } catch(err) {
                     logger.log("debug", "[wss.onmessage] error while parsing message as JSON");
+                    return;
+                }
+
+                //validate message against schema
+                if (!validate(tMsg)){
+                    logger.log("warn", "[wss.onmessage] message did not pass JSON validation.");
+                    for(var i = 0; i < validate.errors.length; i++){
+                        logger.log('info', '[wss.onmessage] error ' + (i+1) + ': ' + validate.errors[i].message);
+                    }
                     return;
                 }
 

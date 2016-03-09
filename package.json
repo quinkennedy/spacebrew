@@ -30,7 +30,10 @@
   },
   "dependencies": {
     "node-uuid": "^1.4.7",
-    "ws": "^1.0.1"
+    "ws": "^1.0.1",
+    "ajv": "^3.8.3",
+    "finalhandler": "^0.4.1",
+    "serve-static": "^1.10.2"
   },
   "devDependencies": {
     "chai": "^3.5.0",
