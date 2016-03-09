@@ -1,28 +1,56 @@
 var Client = require('./leaf.js');
 var Route = require('./route.js');
 var Admin = require('./admin.js');
+var Validator = require('ajv');
+var Schema = require('./schema.json');
 
 /**
  *
  */
-var JsonComm = function(spacebrewManager, clientCallback, adminCallback){
+var JsonComm = function(spacebrewManager, 
+                        clientCallback, 
+                        adminCallback, 
+                        logger){
   if (typeof(spacebrewManager) !== 'object'){
     throw new TypeError('spacebrewManager is required');
   }
   this.spacebrewManager = spacebrewManager;
   this.clientCallback = clientCallback;
   this.adminCallback = adminCallback;
+  this.validator = Validator().compile(Schema);
+
+  // setup logging aliases
+  if (this.logger !== undefined){
+    this.error = logger.error;
+    this.warn = logger.warn;
+    this.info = logger.info;
+    this.trace = logger.trace;
+  } else {
+    this.error = function(){
+      throw new Error(arguments);
+    };
+    this.warn = this.info = this.trace = function(){};
+  }
 };
 
 JsonComm.prototype.handleMessage = function(message, metadata, handle){
-  if (message.config){
-    this.handleConfigMessage(message, metadata, handle);
-  } else if (message.message){
-    this.handlePublishedMessage(message, metadata, handle);
-  } else if (message.admin){
-    this.handleAdminMessage(message, metadata, handle);
-  } else if (message.route){
-    this.handleRouteMessage(message, metadata, handle);
+  if (!this.validator(message)){
+    this.warn(
+      '[JsonComm::handleMessage] message did not pass JSON validation');
+    for (var errorI = 0; errorI < this.validator.errors.length; errorI++){
+      this.trace('[JsonComm::handleMessage] err ' + errorI + ': ' +
+                 this.validator.errors[errorI].message);
+    }
+  } else {
+    if (message.config){
+      this.handleConfigMessage(message, metadata, handle);
+    } else if (message.message){
+      this.handlePublishedMessage(message, metadata, handle);
+    } else if (message.admin){
+      this.handleAdminMessage(message, metadata, handle);
+    } else if (message.route){
+      this.handleRouteMessage(message, metadata, handle);
+    }
   }
 };
 

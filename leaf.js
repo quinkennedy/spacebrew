@@ -207,6 +207,49 @@ Leaf.prototype.getOutgoingConnections = function(){
 };
 
 /**
+ * Returns an array of connection definitions which involve this client.
+ * @return {Array} [{type:string, from:{uuid:string, endpoint:string}, 
+ *   to:{uuid:string, endpoint:string}, routes:[string,...]},...]
+ */
+Leaf.prototype.getConnections = function(){
+  var subClient = this;
+  //start by grabbing all the connections from this client's publishers
+  var connections = this.getOutgoingConnections();
+
+  //for each subscriber of this client
+  for(var subscriberI = this.subscribers.length - 1;
+      subscriberI >= 0;
+      subscriberI--){
+    var subscriber = this.subscribers[subscriberI];
+    //for each connection to this subscriber
+    for(var connectionI = subscriber.connectedTo.length - 1;
+        connectionI >= 0;
+        connectionI--){
+      var connectedTo = subscriber.connectedTo[connectionI];
+      //as long as the connection doesn't come back to this client
+      if (connectedTo.client !== this){
+        //construct a connection map
+        var connection = {type:subscriber.type,
+                          from:{uuid:connectedTo.client.uuid,
+                                endpoint:connectedTo.endpoint.name},
+                          to:{uuid:subClient.uuid,
+                              endpoint:subscriber.name},
+                          routes:[]};
+        //add all linked routes
+        for(var routeI = connectedTo.routes.length - 1;
+            routeI >= 0;
+            routeI--){
+          var route = connectedTo.routes[routeI];
+          connection.routes.push(route.uuid);
+        }
+        connections.push(connection);
+      }
+    }
+  }
+  return connections;
+};
+
+/**
  * Standardizes a subscriber list to ensure that it contains
  *   only the necessary data
  * @param subscriberList {Array} An array that contains subscriber information. 

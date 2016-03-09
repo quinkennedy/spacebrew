@@ -21,7 +21,7 @@ var Manager = function(){
   /** the other managers in this network */
   this.managers = [];
 };
-  
+
 /**
  * Adds a client (leaf node) to the server
  * @param client {Leaf} The client object to add. 
@@ -43,6 +43,13 @@ Manager.prototype.addClient = function(client){
 
     //add the client to the current list of clients
     this.clients.push(client);
+
+    //update the admins
+    for(var adminI = this.admins.length - 1; adminI >= 0; adminI--){
+      this.admins[adminI].sendAdd(client.toMap(), 
+                                  undefined, 
+                                  client.getConnections());
+    }
   }
   return clientUnique;
 };
@@ -363,8 +370,15 @@ Manager.prototype.removeClient = function(client){
   clientI = this.indexOfClient(client);
   
   if (clientI >= 0){
+    client = this.clients[clientI];
+
+    //cache client/connection info to send to admins
+    var update = {clients:[client.toMap()],
+                  routes:[],
+                  connections:client.getConnections()};
+
     //Clean up all connections involving this client's subscribers
-    subClient = this.clients[clientI];
+    subClient = client;
     Manager.cleanConnectionsFrom(subClient.subscribers);
 
     //Clean up all connections involving this client's publishers
@@ -377,45 +391,6 @@ Manager.prototype.removeClient = function(client){
         publisherI >= 0;
         publisherI--){
       publisher = pubClient.publishers[publisherI];
-//      //for each connection this publisher is involved in
-//      for(pubConnectI = publisher.connectedTo.length - 1;
-//          pubConnectI >= 0;
-//          pubConnectI--){
-//        pubConnection = publisher.connectedTo[pubConnectI];
-//        //break the connection from the subscriber side too
-//        subscriber = pubConnection.endpoint;
-//        var cleanedSubscriber = false;
-//        //for each connection this subscriber is involved in
-//        for(subConnectI = subscriber.connectedTo.length -1;
-//            subConnectI >= 0 && !cleanedSubscriber;
-//            subConnectI--){
-//          subConnection = subscriber.connectedTo[subConnectI];
-//          //if the endpoint matches this publisher
-//          if (subConnection.endpoint === publisher){
-//            //then remove the connection
-//            subscriber.connectedTo.splice(subConnectI, 1);
-//            //there should be only one occurance
-//            cleanedSubscriber = true;
-//          }
-//        }
-//        //if we didn't find the connection in the subscriber,
-//        if (!cleanedSubscriber){
-//          //TODO: log warning?
-//        }
-//        /*
-//         * We don't need to clean up each specifying route
-//         * since routes don't track connections, just matched publishers
-//         *  //for each specifying route
-//         *  for(routeI = pubConnection.routes.length - 1;
-//         *      routeI >= 0;
-//         *      routeI--){
-//         *    route = pubConnection.routes[routeI];
-//         *    //unregister this connection from this route
-//         *    // OH! actually connections are not registered with routes
-//         *  }*/
-//        pubConnection.routes = [];
-//      }
-//      publisher.connectedTo = [];
       //for each route this connection matches
       for(routeI = publisher.routes.length - 1;
           routeI >= 0;
@@ -437,6 +412,13 @@ Manager.prototype.removeClient = function(client){
       publisher.routes = [];
     }
     this.clients.splice(clientI, 1);
+
+    //update the admins
+    for(var adminI = this.admins.length - 1; adminI >= 0; adminI--){
+      this.admins[adminI].sendRemove(update.clients,
+                                     update.routes,
+                                     update.connections);
+    }
   }
   return (clientI >= 0);
 };
@@ -510,6 +492,23 @@ Manager.prototype.addRoute = function(route){
   if (routeUnique){
     this.connectRoute(route);
     this.routes.push(route);
+
+    //get all the connections this route is associated with
+    var connections = route.getConnections();
+    //filter out any connections that were 
+    //previously-defined by other routes
+    connections = connections.filter(
+      function(element/*, index, array*/){
+        return (element.routes.length === 1 &&
+                element.routes[0] === route);
+      });
+
+    //update the admins
+    for(var adminI = this.admins.length - 1; adminI >= 0; adminI--){
+      this.admins[adminI].sendAdd(undefined,
+                                  route.toMap(),
+                                  connections);
+    }
   }
   return routeUnique;
 };
@@ -533,6 +532,20 @@ Manager.prototype.removeRoute = function(route){
   routeI = this.indexOfRoute(route);
   if (routeI >= 0){
     route = this.routes[routeI];
+
+    //get all the connections this route is associated with
+    var connections = route.getConnections();
+    //filter out any connections that have other defining routes
+    connections = connections.filter(
+      function(element/*, index, array*/){
+        return (element.routes.length === 1 &&
+                element.routes[0] === route);
+      });
+    //construct the admin update object
+    var update = {clients:[],
+                  routes:[route.toMap()],
+                  connections:connections};
+
     //Clean up publisher matches and associated pub/sub connections
     //for each matched publisher
     for(matchI = route.from.matched.length - 1;
@@ -584,6 +597,13 @@ Manager.prototype.removeRoute = function(route){
       }
     }
     this.routes.splice(routeI, 1);
+
+    // tell all the admins about the removed route and connections
+    for(var adminI = this.admins.length - 1; adminI >= 0; adminI--){
+      this.admins[adminI].sendRemove(update.clients,
+                                     update.routes,
+                                     update.connections);
+    }
   }
   return (routeI >= 0);
 };
@@ -645,6 +665,12 @@ Manager.prototype.published = function(pubClient, pubName, type, message){
       }
     }
     if (publisher !== undefined){
+
+      //notify the admins of the published message
+      for(var adminI = this.admins.length - 1; adminI >= 0; adminI--){
+        this.admins[adminI].published(pubClient, pubName, type, message);
+      }
+
       //for each connected subscriber
       for(var connectionI = publisher.connectedTo.length -1;
           connectionI >= 0;

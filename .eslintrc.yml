@@ -25,3 +25,7 @@ rules:
   complexity:
     - 1
     - 6
+  no-undef: 
+    - 2
+  no-use-before-define:
+    - 2

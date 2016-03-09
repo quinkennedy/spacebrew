@@ -214,6 +214,45 @@ Route.prototype.toMap = function(){
 };
 
 /**
+ * gets a list of all connections this route is associated with
+ * @returns {Array} [{type:string, from:{uuid:string, endpoint:string},
+ *   to:{uuid:string, endpoint:string}, routes:[string,...]}]
+ */
+Route.prototype.getConnections = function(){
+  var connections = [];
+
+  //go through all publishers matched against this route
+  for(var matchI = this.from.matched.length - 1;
+      matchI >= 0;
+      matchI--){
+    var pubClient = this.from.matched[matchI].client;
+    var publisher = this.from.matched[matchI].endpoint;
+    //for each connection associated with this publisher
+    for(var connectionI = publisher.connectedTo.length - 1;
+        connectionI >= 0;
+        connectionI--){
+      var subClient = publisher.connectedTo[connectionI].client;
+      var subscriber = publisher.connectedTo[connectionI].endpoint;
+      var connection = {type:publisher.type,
+                        from:{uuid:pubClient.uuid,
+                              endpoint:publisher.name},
+                        to:{uuid:subClient.uuid,
+                            endpoint:subscriber.name},
+                        routes:[]};
+      //add all route uuids
+      for(var routeI = connection.routes.length - 1;
+          routeI >= 0; 
+          routeI--){
+        var route = connection.routes[routeI];
+        connection.routes.push(route.uuid);
+      }
+      connections.push(connection);
+    }
+  }
+  return connections;
+};
+
+/**
  * gets an array of only the backreferences in the resulting
  *   array from RegExp.exec or String.match
  * @param {Array} matchArray A resulting array from 
