@@ -18,6 +18,7 @@ var JsonComm = function(spacebrewManager,
   this.clientCallback = clientCallback;
   this.adminCallback = adminCallback;
   this.validator = Validator().compile(Schema);
+  this.logger = logger;
 
   // setup logging aliases
   if (this.logger !== undefined){
@@ -38,8 +39,8 @@ JsonComm.prototype.handleMessage = function(message, metadata, handle){
     this.warn(
       '[JsonComm::handleMessage] message did not pass JSON validation');
     for (var errorI = 0; errorI < this.validator.errors.length; errorI++){
-      this.trace('[JsonComm::handleMessage] err ' + errorI + ': ' +
-                 this.validator.errors[errorI].message);
+      this.info('[JsonComm::handleMessage] err ' + errorI + ': ' +
+                this.validator.errors[errorI].message);
     }
   } else {
     if (message.config){
@@ -109,11 +110,11 @@ JsonComm.prototype.handleAdminMessage = function(message, metadata, handle){
               connectionI >= 0;
               connectionI--){
             var connection = data.connections[connectionI];
-            var pubClient = this.spacebrewManager.clients[
-                              this.spacebrewManager.indexOfClient(
+            var pubClient = self.spacebrewManager.clients[
+                              self.spacebrewManager.indexOfClient(
                                 connection.from.uuid)];
-            var subClient = this.spacebrewManager.clients[
-                              this.spacebrewManager.indexOfClient(
+            var subClient = self.spacebrewManager.clients[
+                              self.spacebrewManager.indexOfClient(
                                 connection.to.uuid)];
             adminMsg.push(
               {route:{type:'add',

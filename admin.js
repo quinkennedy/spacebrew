@@ -57,11 +57,23 @@ Admin.messageTypes.ADD = 'add';
 Admin.messageTypes.REMOVE = 'remove';
 Admin.messageTypes.PUBLISHED = 'published';
 
+
 Admin.prototype.sendAdd = function(clients, routes, connections){
-  this.sendCallback(Admin.messageTypes.ADD, 
-                    {clients:clients,
-                     routes:routes,
-                     connections:connections});
+  clients = clients || [];
+  routes = routes || [];
+  connections = connections || [];
+
+  if (clients instanceof Array && 
+      routes instanceof Array && 
+      connections instanceof Array){
+    this.sendCallback(Admin.messageTypes.ADD, 
+                      {clients:clients,
+                       routes:routes,
+                       connections:connections});
+  } else {
+    throw new TypeError(
+      'clients, routes, and connections must all be Arrays (or undefined)');
+  }
 };
 
 Admin.prototype.sendRemove = function(clients, routes, connections){

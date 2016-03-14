@@ -17,6 +17,14 @@ var Data = function(){
                  to:{name:'client1',
                      endpoint:'sub1_1',
                      metadata:{}}};
+  this.route3 = {style:Route.styles.STRING,
+                 type:'string',
+                 from:{name:'client1',
+                       endpoint:'pub1_1',
+                       metadata:{}},
+                 to:{name:'client1',
+                     endpoint:'sub1_1',
+                     metadata:{}}};
   this.stringRoute = {style:Route.styles.STRING,
                       type:'type',
                       from:{name:'client1',
@@ -92,6 +100,26 @@ Data.initClient = function(data, callback){
                   callback,
                   data.description,
                   data.metadata);
+};
+
+Data.addClientJson = function(data){
+  return {config:{name:data.name,
+                  description:data.description,
+                  publish:{messages:data.publishers},
+                  subscribe:{messages:data.subscribers},
+                  options:{}}};
+};
+
+Data.addRouteJson = function(data){
+  return {route:{type:'add',
+                 publisher:{type:data.type,
+                            clientName:data.from.name,
+                            remoteAddress:'127.0.0.1',
+                            name:data.from.endpoint},
+                 subscriber:{type:data.type,
+                             clientName:data.to.name,
+                             remoteAddress:'127.0.0.1',
+                             name:data.to.endpoint}}};
 };
 
 module.exports = Data;

@@ -46,7 +46,7 @@ Manager.prototype.addClient = function(client){
 
     //update the admins
     for(var adminI = this.admins.length - 1; adminI >= 0; adminI--){
-      this.admins[adminI].sendAdd(client.toMap(), 
+      this.admins[adminI].sendAdd([client.toMap()], 
                                   undefined, 
                                   client.getConnections());
     }
@@ -63,10 +63,7 @@ Manager.prototype.addAdmin = function(admin){
   var adminUnique = (this.indexOfAdmin(admin) === -1);
   if (adminUnique){
     //send current state to this admin
-    admin.sendCallback(Admin.messageTypes.ADD, 
-                       {clients:this.getClients(),
-                        routes:this.getRoutes(),
-                        connections: this.getConnections()});
+    admin.sendAdd(this.getClients(), this.getRoutes(), this.getConnections());
 
     //add the admin to the list of registered admins
     this.admins.push(admin);
@@ -500,13 +497,13 @@ Manager.prototype.addRoute = function(route){
     connections = connections.filter(
       function(element/*, index, array*/){
         return (element.routes.length === 1 &&
-                element.routes[0] === route);
+                element.routes[0] === route.uuid);
       });
 
     //update the admins
     for(var adminI = this.admins.length - 1; adminI >= 0; adminI--){
       this.admins[adminI].sendAdd(undefined,
-                                  route.toMap(),
+                                  [route.toMap()],
                                   connections);
     }
   }

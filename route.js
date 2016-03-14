@@ -231,22 +231,23 @@ Route.prototype.getConnections = function(){
     for(var connectionI = publisher.connectedTo.length - 1;
         connectionI >= 0;
         connectionI--){
-      var subClient = publisher.connectedTo[connectionI].client;
-      var subscriber = publisher.connectedTo[connectionI].endpoint;
-      var connection = {type:publisher.type,
-                        from:{uuid:pubClient.uuid,
-                              endpoint:publisher.name},
-                        to:{uuid:subClient.uuid,
-                            endpoint:subscriber.name},
-                        routes:[]};
+      var connection = publisher.connectedTo[connectionI];
+      var subClient = connection.client;
+      var subscriber = connection.endpoint;
+      var connMap = {type:publisher.type,
+                     from:{uuid:pubClient.uuid,
+                           endpoint:publisher.name},
+                     to:{uuid:subClient.uuid,
+                         endpoint:subscriber.name},
+                     routes:[]};
       //add all route uuids
       for(var routeI = connection.routes.length - 1;
           routeI >= 0; 
           routeI--){
         var route = connection.routes[routeI];
-        connection.routes.push(route.uuid);
+        connMap.routes.push(route.uuid);
       }
-      connections.push(connection);
+      connections.push(connMap);
     }
   }
   return connections;
