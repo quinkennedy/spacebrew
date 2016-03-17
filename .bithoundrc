@@ -1,0 +1,18 @@
+{
+  "ignore":[
+    "node_modules/",
+    "admin/",
+    "admin/js/",
+    "node_*",
+    "spacebrew*",
+    "http_link.js",
+    "coverage/",
+    "out/"
+  ],
+  "test":[
+    "test/"
+  ],
+  "critics":{
+    "lint":{"engine":"eslint"}
+  }
+}
