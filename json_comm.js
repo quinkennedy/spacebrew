@@ -44,19 +44,20 @@ JsonComm.prototype.handleMessage = function(message, metadata, handle){
     }
   } else {
     if (message.config){
-      this.handleConfigMessage(message, metadata, handle);
+      return this.handleConfigMessage(message, metadata, handle);
     } else if (message.message){
       this.handlePublishedMessage(message, metadata, handle);
     } else if (message.admin){
-      this.handleAdminMessage(message, metadata, handle);
+      return this.handleAdminMessage(message, metadata, handle);
     } else if (message.route){
-      this.handleRouteMessage(message, metadata, handle);
+      return this.handleRouteMessage(message, metadata, handle);
     }
   }
 };
 
 JsonComm.prototype.handleConfigMessage = function(message, metadata, handle){
   var self = this;
+  var config = message.config;
   var client = new Client(message.config.name,
                           message.config.subscribe.messages,
                           message.config.publish.messages,
@@ -66,11 +67,12 @@ JsonComm.prototype.handleConfigMessage = function(message, metadata, handle){
                                 {name:endpoint,
                                  type:type,
                                  value:message,
-                                 clientName:message.config.name}}, 
+                                 clientName:config.name}}, 
                               handle);},
                           message.config.description,
                           metadata);
   this.spacebrewManager.addClient(client);
+  return client;
 };
 
 JsonComm.prototype.handlePublishedMessage = function(message, 
@@ -90,34 +92,57 @@ JsonComm.prototype.handleAdminMessage = function(message, metadata, handle){
     new Admin(
       function(type, data){
         var adminMsg;
-        if (type === Admin.messageTypes.ADD){
+        if (type === Admin.messageTypes.ADD ||
+            type === Admin.messageTypes.REMOVE){
           adminMsg = [];
           //add all client configs
           for(var clientI = data.clients.length - 1;
               clientI >= 0;
               clientI--){
             var client = data.clients[clientI];
-            adminMsg.push(
-              {config:{name:client.name,
-                       description:client.description,
-                       publish:{messages:client.publishers},
-                       subscribe:{messages:client.subscribers},
-                       options:{},
-                       remoteAddress:client.metadata.ip}});
+            if (type === Admin.messageTypes.ADD){
+              adminMsg.push(
+                {config:{name:client.name,
+                         description:client.description,
+                         publish:{messages:client.publishers},
+                         subscribe:{messages:client.subscribers},
+                         options:{},
+                         remoteAddress:client.metadata.ip}});
+            } else if (type === Admin.messageTypes.REMOVE){
+              adminMsg.push({remove:[{name:client.name,
+                                      remoteAddress:client.metadata.ip}],
+                             targetType:'admin'});
+            }
           }
           //add all routes
           for(var connectionI = data.connections.length - 1;
               connectionI >= 0;
               connectionI--){
             var connection = data.connections[connectionI];
+            var getClientFrom = function(uuid, clients){
+              for(var clientI = clients.length - 1;
+                  clientI >= 0;
+                  clientI--){
+                var client = clients[clientI];
+                if (client.uuid === uuid){
+                  return client;
+                }
+              }
+            };
             var pubClient = self.spacebrewManager.clients[
                               self.spacebrewManager.indexOfClient(
                                 connection.from.uuid)];
             var subClient = self.spacebrewManager.clients[
                               self.spacebrewManager.indexOfClient(
                                 connection.to.uuid)];
+            if (pubClient === undefined){
+              pubClient = getClientFrom(connection.from.uuid, data.clients);
+            }
+            if (subClient === undefined){
+              subClient = getClientFrom(connection.to.uuid, data.clients);
+            }
             adminMsg.push(
-              {route:{type:'add',
+              {route:{type:type,
                       publisher:{clientName:pubClient.name,
                                  name:connection.from.endpoint,
                                  type:connection.type,
@@ -127,25 +152,48 @@ JsonComm.prototype.handleAdminMessage = function(message, metadata, handle){
                                   type:connection.type,
                                   remoteAddress:subClient.metadata.ip}}});
           }
+        } else if (type === Admin.messageTypes.PUBLISHED){
+          adminMsg = {message:{clientName:data.client.name,
+                               name:data.publisher.name,
+                               type:data.publisher.type,
+                               remoteAddress:data.client.metadata.ip},
+                      targetType:'admin'};
+          if (data.message !== undefined){
+            adminMsg.message.value = data.message;
+          }
         }
         self.adminCallback(adminMsg, handle);},
       message);
   this.spacebrewManager.addAdmin(admin);
+  return admin;
 };
 
 JsonComm.prototype.handleRouteMessage = function(message/*, metadata, handle*/){
   var pub = message.route.publisher,
       sub = message.route.subscriber;
   if (pub.type === sub.type){
-    var route = new Route(Route.styles.STRING,
-                          pub.type,
-                          {name:pub.clientName,
-                           metadata:{ip:pub.remoteAddress}},
-                          pub.name,
-                          {name:sub.clientName,
-                           metadata:{ip:sub.remoteAddress}},
-                          sub.name);
-    this.spacebrewManager.addRoute(route);
+    if (message.route.type === Admin.messageTypes.REMOVE){
+      var routeMap = {type:pub.type,
+                      style:Route.styles.STRING,
+                      from:{endpoint:pub.name,
+                            name:pub.clientName,
+                            metadata:{ip:pub.remoteAddress}},
+                      to:{endpoint:sub.name,
+                          name:sub.clientName,
+                          metadata:{ip:sub.remoteAddress}}};
+      this.spacebrewManager.removeRoute(routeMap);
+    } else if (message.route.type === Admin.messageTypes.ADD){
+      var route = new Route(Route.styles.STRING,
+                            pub.type,
+                            {name:pub.clientName,
+                             metadata:{ip:pub.remoteAddress}},
+                            pub.name,
+                            {name:sub.clientName,
+                             metadata:{ip:sub.remoteAddress}},
+                            sub.name);
+      this.spacebrewManager.addRoute(route);
+      return route;
+    }
   }
 };
 

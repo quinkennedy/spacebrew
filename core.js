@@ -311,38 +311,6 @@ Manager.cleanConnectionsFrom = function(fromEndpoints){
       fromConnection = fromEndpoint.connectedTo[fromConnectI];
       //break the connection
       Manager.breakConnection(fromEndpoint, fromConnection);
-//      //break the connection from the other side too
-//      toEndpoint = fromConnection.endpoint;
-//      var cleanedTo = false;
-//      //for each connection the other endpoint is involved in
-//      for(toConnectI = toEndpoint.connectedTo.length -1;
-//          toConnectI >= 0 && !cleanedTo;
-//          toConnectI--){
-//        toConnection = toEndpoint.connectedTo[toConnectI];
-//        //if the OTHER other endpoint matches the fromEndpoint
-//        if (toConnection.endpoint === fromEndpoint){
-//          //then remove the connection
-//          toEndpoint.connectedTo.splice(toConnectI, 1);
-//          //there should be only one occurance
-//          cleanedTo = true;
-//        }
-//      }
-//      //if we didn't find the connection in the other endpoint,
-//      if (!cleanedTo){
-//        //TODO: log warning?
-//      }
-//      /*
-//       * We don't need to clean up each specifying route
-//       * since routes don't track connections, just matched publishers
-//       *  //for each specifying route
-//       *  for(routeI = fromConnection.routes.length - 1;
-//       *      routeI >= 0;
-//       *      routeI--){
-//       *    route = fromConnection.routes[routeI];
-//       *    //unregister this connection from this route
-//       *    // OH! actually connections are not registered with routes
-//       *  }*/
-//      fromConnection.routes = [];
     }
     fromEndpoint.connectedTo = [];
   }
@@ -510,6 +478,14 @@ Manager.prototype.addRoute = function(route){
   return routeUnique;
 };
 
+Manager.prototype.removeAdmin = function(admin){
+  var adminI = this.indexOfAdmin(admin);
+  if (adminI >= 0){
+    this.admins.splice(adminI, 1);
+  }
+  return (adminI >= 0);
+};
+
 /**
  * Removes the specified route from the server
  * @param route {Object|string|Route} details about the route.
@@ -536,7 +512,7 @@ Manager.prototype.removeRoute = function(route){
     connections = connections.filter(
       function(element/*, index, array*/){
         return (element.routes.length === 1 &&
-                element.routes[0] === route);
+                element.routes[0] === route.uuid);
       });
     //construct the admin update object
     var update = {clients:[],

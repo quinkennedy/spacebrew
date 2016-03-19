@@ -107,6 +107,23 @@ describe('test JSON interface', function(){
                            {ip:'127.0.0.1'},
                            clientHandle);
   });
+  it('admin is notified of clients being removed', function(done){
+    jsonComm.handleMessage({admin:true},{ip:'127.0.0.1'},adminHandle);
+    var client = jsonComm.handleMessage(
+      D.addClientJson(d.clientWithEndpoints1),
+                      {ip:'127.0.0.1'},
+                      clientHandle);
+    //unregister client
+    adminCallback = function(message, handle){
+      expect(handle).to.equal(adminHandle);
+      var clientRemove = {remove:[{name:d.clientWithEndpoints1.name,
+                                     remoteAddress:'127.0.0.1'}],
+                          targetType:'admin'};
+      expect(message).to.deep.equal([clientRemove]);
+      done();
+    };
+    manager.removeClient(client);
+  });
   it('admin is not notified of routes that don\'t create connections',
     function(){
       adminCallback = function(message, handle){
@@ -168,43 +185,108 @@ describe('test JSON interface', function(){
                              clientHandle);
     }
   );
- // it('can send and receive messages', function(done){
- //   var publishedMsg = {message:{clientName:'client',
- //                                name:'pub',
- //                                type:'string',
- //                                value:'message'}};
- //   var callbackCount = 0;
- //   var gotCallback = function(){
- //     callbackCount++;
- //     if (callbackCount === 2){
- //       done();
- //     }
- //   };
- //   adminCallback = function(message, handle){
- //     expect(handle).to.equal(adminHandle);
- //     expect(message).to.deep.equal(publishedMsg);
- //     gotCallback();
- //   };
- //   clientCallback = function(message, handle){
- //     expect(handle).to.equal(clientHandle);
- //     var receivedMsg = publishedMsg;
- //     receivedMsg.name = 'sub';
- //     expect(message).to.deep.equal(receivedMsg);
- //     gotCallback();
- //   };
- //   JsonComm.handleMessage(publishedMsg, clientHandle);
- // });
- // it('can remove a route', function(done){
- //   adminCallback = function(message, handle){
- //     expect(handle).to.equal(adminHandle);
- //     done();
- //   };
- // });
- // it('can remove a client', function(done){
- //   adminCallback = function(message, handle){
- //     expect(handle).to.equal(adminHandle);
- //     done();
- //   };
- //   clientCallback = undefined;
- // });
+  it('admin is notified when connections are broken', function(done){
+    //register client
+    var client = jsonComm.handleMessage(
+      D.addClientJson(d.clientWithEndpoints1),
+                      {ip:'127.0.0.1'},
+                      clientHandle);
+    //register route
+    jsonComm.handleMessage(D.addRouteJson(d.route3),adminHandle);
+    //register admin
+    jsonComm.handleMessage({admin:true},{ip:'127.0.0.1'},adminHandle);
+    //unregister client
+    adminCallback = function(message, handle){
+      expect(handle).to.equal(adminHandle);
+      var clientRemove = {remove:[{name:d.clientWithEndpoints1.name,
+                                     remoteAddress:'127.0.0.1'}],
+                          targetType:'admin'};
+      var routeMsg = D.rmRouteJson(d.route3);
+      expect(message).to.deep.equal([clientRemove,routeMsg]);
+      done();
+    };
+    manager.removeClient(client);
+  });
+  it('admin is notified when connections are broken by route removal', 
+    function(done){
+      //register client
+      jsonComm.handleMessage(
+        D.addClientJson(d.clientWithEndpoints1),
+                        {ip:'127.0.0.1'},
+                        clientHandle);
+      //register route
+      jsonComm.handleMessage(D.addRouteJson(d.route3),adminHandle);
+      //register admin
+      jsonComm.handleMessage({admin:true},{ip:'127.0.0.1'},adminHandle);
+      //unregister route
+      adminCallback = function(message, handle){
+        expect(handle).to.equal(adminHandle);
+        var routeMsg = D.rmRouteJson(d.route3);
+        expect(message).to.deep.equal([routeMsg]);
+        done();
+      };
+      jsonComm.handleMessage(D.rmRouteJson(d.route3), adminHandle);
+    }
+  );
+  it('routes can be remoed directly too', 
+    function(done){
+      //register client
+      jsonComm.handleMessage(
+        D.addClientJson(d.clientWithEndpoints1),
+                        {ip:'127.0.0.1'},
+                        clientHandle);
+      //register route
+      var route = jsonComm.handleMessage(D.addRouteJson(d.route3),adminHandle);
+      //register admin
+      jsonComm.handleMessage({admin:true},{ip:'127.0.0.1'},adminHandle);
+      //unregister route
+      adminCallback = function(message, handle){
+        expect(handle).to.equal(adminHandle);
+        var routeMsg = D.rmRouteJson(d.route3);
+        expect(message).to.deep.equal([routeMsg]);
+        done();
+      };
+      manager.removeRoute(route);
+    }
+  );
+  it('can send and receive messages', function(done){
+    var publishedMsg = 
+      {message:{clientName:d.clientWithEndpoints1.name,
+                name:d.clientWithEndpoints1.publishers[0].name,
+                type:d.clientWithEndpoints1.publishers[0].type,
+                value:'message'}};
+    //register client
+    jsonComm.handleMessage(
+      D.addClientJson(d.clientWithEndpoints1),
+                      {ip:'127.0.0.1'},
+                      clientHandle);
+    //register route
+    jsonComm.handleMessage(D.addRouteJson(d.route3),adminHandle);
+    //register admin
+    jsonComm.handleMessage({admin:true},{ip:'127.0.0.1'},adminHandle);
+    //send message
+    var callbackCount = 0;
+    var gotCallback = function(){
+      callbackCount++;
+      if (callbackCount === 2){
+        done();
+      }
+    };
+    adminCallback = function(message, handle){
+      expect(handle).to.equal(adminHandle);
+      var adminMsg = JSON.parse(JSON.stringify(publishedMsg));
+      adminMsg.message.remoteAddress = '127.0.0.1';
+      adminMsg.targetType = 'admin';
+      expect(message).to.deep.equal(adminMsg);
+      gotCallback();
+    };
+    clientCallback = function(message, handle){
+      expect(handle).to.equal(clientHandle);
+      var receivedMsg = JSON.parse(JSON.stringify(publishedMsg));
+      receivedMsg.message.name = d.clientWithEndpoints1.subscribers[0].name;
+      expect(message).to.deep.equal(receivedMsg);
+      gotCallback();
+    };
+    jsonComm.handleMessage(publishedMsg, {ip:'127.0.0.1'}, clientHandle);
+  });
 });

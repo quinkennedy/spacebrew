@@ -122,4 +122,16 @@ Data.addRouteJson = function(data){
                              name:data.to.endpoint}}};
 };
 
+Data.rmRouteJson = function(data){
+  return {route:{type:'remove',
+                 publisher:{type:data.type,
+                            clientName:data.from.name,
+                            remoteAddress:'127.0.0.1',
+                            name:data.from.endpoint},
+                 subscriber:{type:data.type,
+                             clientName:data.to.name,
+                             remoteAddress:'127.0.0.1',
+                             name:data.to.endpoint}}};
+};
+
 module.exports = Data;

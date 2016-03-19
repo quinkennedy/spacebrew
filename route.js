@@ -199,8 +199,8 @@ Route.prototype.toMap = function(){
   var out = {type:this.type,
              style:this.style,
              uuid:this.uuid,
-          from:{endpoint:this.from.endpoint},
-          to:{endpoint:this.to.endpoint}};
+             from:{endpoint:this.from.endpoint},
+             to:{endpoint:this.to.endpoint}};
   if (this.style === Route.styles.UUID){
     out.from.uuid = this.from.uuid;
     out.to.uuid = this.to.uuid;
