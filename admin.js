@@ -9,7 +9,7 @@ var Leaf = require('./leaf.js');
 /**
  * Creates an instance of a Spacebrew Admin
  * @constructor
- * @param sendCallback {function} function that will be called 
+ * @param {function} sendCallback function that will be called 
  *   when a message is being sent to this Admin
  * @param {object} [options] an optional map of options for controlling
  *   what messages/how verbose communication is
@@ -105,9 +105,9 @@ Admin.configs.NO_MSGS = {key:'no_msgs',
 
 /**
  * cleans up the configs to conform to single-level expectation
- * @param metadata {Object} The metadata object to sanitize.
+ * @param {Object} config The config object to sanitize.
  *   Ideally this object only contains values that are numbers or strings.
- * @return {Object} the passed in metadata object with all functions,
+ * @return {Object} the passed in config object with all functions,
  *   objects, arrays, etc. removed. {key:string|number,...}
  */
 Admin.cleanConfig = function(config){
