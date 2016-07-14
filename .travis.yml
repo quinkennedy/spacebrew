@@ -1,4 +1,4 @@
-language: cpp
+language: node_js
 env:
   - NODE_VERSION="node"
   - NODE_VERSION="6"
