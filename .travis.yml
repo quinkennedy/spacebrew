@@ -1,16 +1,12 @@
 language: cpp
 env:
   - NODE_VERSION="node"
-  - NODE_VERSION="4.3"
+  - NODE_VERSION="6"
+  - NODE_VERSION="4"
   - NODE_VERSION="0.12"
 os:
   - linux
   - osx
-before_install:
-  - git clone https://github.com/creationix/nvm.git /tmp/.nvm;
-    source /tmp/.nvm/nvm.sh;
-    nvm install $NODE_VERSION;
-    nvm use --delete-prefix $NODE_VERSION;
 install:
   - npm install;
     npm install codecov;
