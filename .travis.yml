@@ -12,7 +12,7 @@ install:
     npm install codecov;
     npm install codacy-coverage;
     npm install coveralls;
-    npm install git+https://git@github.com/quinkennedy/travis-github-lint-status.git;
+    npm install travis-github-lint-status;
 script:
   - if [ "$TRAVIS_OS_NAME" == "linux" ] && [ "$TRAVIS_NODE_VERSION" == "node" ]; then
     ./node_modules/travis-github-lint-status/index.js;
