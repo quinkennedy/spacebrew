@@ -14,11 +14,13 @@ install:
     npm install coveralls;
     npm install git+https://git@github.com/quinkennedy/travis-github-lint-status.git;
 script:
-  - npm run coverage
+  - if [ "$TRAVIS_OS_NAME" == "linux" ] && [ "$TRAVIS_NODE_VERSION" == "node" ]; then
+    ./node_modules/travis-github-lint-status/index.js;
+    fi;
+    npm run coverage;
 after_success:
   - if [ "$TRAVIS_OS_NAME" == "linux" ] && [ "$TRAVIS_NODE_VERSION" == "node" ]; then
     ./node_modules/.bin/codecov;
     cat ./coverage/lcov.info | ./node_modules/.bin/codacy-coverage;
     cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js;
-    ./node_modules/travis-github-lint-status/index.js;
     fi;
