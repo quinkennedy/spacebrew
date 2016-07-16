@@ -1,7 +1,6 @@
 language: node_js
 node_js:
   - "node"
-  - "6"
   - "4"
   - "0.12"
 os:
@@ -9,11 +8,17 @@ os:
   - osx
 install:
   - npm install;
+    if [ "$TRAVIS_OS_NAME" == "linux" ] && [ "$TRAVIS_NODE_VERSION" == "node" ]; then
     npm install codecov;
     npm install codacy-coverage;
     npm install coveralls;
+    npm install travis-github-lint-status;
+    fi;
 script:
-  - npm run coverage
+  - if [ "$TRAVIS_OS_NAME" == "linux" ] && [ "$TRAVIS_NODE_VERSION" == "node" ]; then
+    ./node_modules/travis-github-lint-status/index.js;
+    fi;
+    npm run coverage;
 after_success:
   - if [ "$TRAVIS_OS_NAME" == "linux" ] && [ "$TRAVIS_NODE_VERSION" == "node" ]; then
     ./node_modules/.bin/codecov;
