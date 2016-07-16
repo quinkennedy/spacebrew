@@ -25,8 +25,7 @@
   "scripts": {
     "start": "node node_server_forever.js",
     "test": "node_modules/mocha/bin/mocha test",
-    "lint": "node_modules/jshint/bin/jshint core.js leaf.js route.js test/; return 0;",
-    "eslint": "node_modules/eslint/bin/eslint.js .; return 0;",
+    "lint": "node_modules/eslint/bin/eslint.js .; return 0;",
     "coverage": "istanbul cover _mocha -- -R spec"
   },
   "dependencies": {
@@ -41,7 +40,6 @@
     "eslint": "^2.2.0",
     "istanbul": "^0.4.2",
     "jsdoc": "^3.4.0",
-    "jshint": "^2.9.1",
     "mocha": "^2.4.5"
   },
   "optionalDependencies": {
