@@ -29,6 +29,7 @@ rules:
     - 2
   no-use-before-define:
     - 2
+    - functions: false
   require-jsdoc:
     - 2
   valid-jsdoc:

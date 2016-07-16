@@ -16,20 +16,26 @@ processArguments();
  * Processes the command line arguments when app is launched
  */
 function processArguments(){
-  console.log('processing',process.argv);
   var argv = process.argv;
   for(var i = 2; i < argv.length; ){
     i = startServer(argv, i);
   }
 }
 
+/**
+ * Collect the options and start the server defined at the specific index
+ *   in the argument list
+ * @param {string[]} argv argument list
+ * @param {number} index index into argument list to start parsing
+ * @returns {number} the next index in the argument list to start 
+ *   processing from
+ */
 function startServer(argv, index){
   var server = {};
   var i = index;
   var name = argv[i];
   i++;
   try {
-    console.log('loading',name);
     server.module = require(name);
     var options = {};
     for( ; i < argv.length; ){
