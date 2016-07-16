@@ -27,7 +27,7 @@
     "test": "node_modules/mocha/bin/mocha test",
     "lint": "node_modules/jshint/bin/jshint core.js leaf.js route.js test/; return 0;",
     "eslint": "node_modules/eslint/bin/eslint.js .; return 0;",
-    "coverage": "istanbul cover _mocha -- -R spec; return 0;"
+    "coverage": "istanbul cover _mocha -- -R spec"
   },
   "dependencies": {
     "node-uuid": "^1.4.7",

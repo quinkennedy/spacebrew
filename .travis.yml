@@ -1,17 +1,27 @@
-language: cpp
-env:
-  - NODE_VERSION="node"
-  - NODE_VERSION="4.3"
-  - NODE_VERSION="0.12"
+language: node_js
+node_js:
+  - "node"
+  - "4"
+  - "0.12"
 os:
   - linux
   - osx
-before_install:
-  - git clone https://github.com/creationix/nvm.git /tmp/.nvm;
-    source /tmp/.nvm/nvm.sh;
-    nvm install $NODE_VERSION;
-    nvm use --delete-prefix $NODE_VERSION;
 install:
-  - npm install
+  - npm install;
+    if [ "$TRAVIS_OS_NAME" == "linux" ] && [ "$TRAVIS_NODE_VERSION" == "node" ]; then
+    npm install codecov;
+    npm install codacy-coverage;
+    npm install coveralls;
+    npm install travis-github-lint-status;
+    fi;
 script:
-  - npm test
+  - if [ "$TRAVIS_OS_NAME" == "linux" ] && [ "$TRAVIS_NODE_VERSION" == "node" ]; then
+    ./node_modules/travis-github-lint-status/index.js;
+    fi;
+    npm run coverage;
+after_success:
+  - if [ "$TRAVIS_OS_NAME" == "linux" ] && [ "$TRAVIS_NODE_VERSION" == "node" ]; then
+    ./node_modules/.bin/codecov;
+    cat ./coverage/lcov.info | ./node_modules/.bin/codacy-coverage;
+    cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js;
+    fi;

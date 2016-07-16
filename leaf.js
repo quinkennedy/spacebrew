@@ -8,14 +8,14 @@ var uuid = require('node-uuid');
 /**
  * Creates an instance of a Spacebrew Leaf
  * @constructor
- * @param name {string}
- * @param subscribers {Array} expected format [{name:string, type:string},...]
- * @param publishers {Array} expected format 
+ * @param {string} name user-friendly name of this Leaf node
+ * @param {Array} subscribers expected format [{name:string, type:string},...]
+ * @param {Array} publishers expected format 
  *   [{name:string, type:string, default:],...]
- * @param sendCallback {function} function that will be called 
+ * @param {function} sendCallback function that will be called 
  *   when a message is being sent to this Client
- * @param description {string} human-readable description
- * @param metadata {Object} free-form-ish metadata map
+ * @param {string} description human-readable description
+ * @param {Object} metadata free-form-ish metadata map
  */
 var Leaf = function(name, 
                     subscribers, 
@@ -252,7 +252,7 @@ Leaf.prototype.getConnections = function(){
 /**
  * Standardizes a subscriber list to ensure that it contains
  *   only the necessary data
- * @param subscriberList {Array} An array that contains subscriber information. 
+ * @param {Array} subscriberList An array that contains subscriber information. 
  *   Ideally this is in the same format as will be returned by this function.
  * @return {Array} the cleaned-up list of subscribers. 
  *   Any malformed subscribers are excluded. 
@@ -273,7 +273,7 @@ Leaf.cleanSubscribers = function(subscriberList){
 
 /**
  * Creates a publisher list with the appropriate format
- * @param publisherList {Array} An array that contains publisher information.
+ * @param {Array} publisherList An array that contains publisher information.
  *   Ideally in this format [{name:string, type:string, default:},...]
  * @return {Array} An appropriately-initialized list of publishers.
  */
@@ -292,7 +292,7 @@ Leaf.cleanPublishers = function(publisherList){
 
 /**
  * Verifies that the function provided is actually a function
- * @param func {function} The function to test
+ * @param {function} func The function to test
  * @return {function} The supplied function, if it passes validation.
  * @throws Throws an error if the supplied argument is not a function
  */
@@ -305,7 +305,7 @@ Leaf.verifyFunction = function(func){
 
 /**
  * cleans up the metadata to conform to single-level expectation
- * @param metadata {Object} The metadata object to sanitize.
+ * @param {Object} metadata The metadata object to sanitize.
  *   Ideally this object only contains values that are numbers or strings.
  * @return {Object} the passed in metadata object with all functions,
  *   objects, arrays, etc. removed. {key:string|number,...}
@@ -331,8 +331,8 @@ Leaf.cleanMetadata = function(metadata){
 /**
  * Returns true if both metadata objects 
  *   have the same keys and associated values
- * @param mA {Object} A metadata object to compare against
- * @param mB {Object} A metadata object to compare against
+ * @param {Object} mA A metadata object to compare against
+ * @param {Object} mB A metadata object to compare against
  * @return {boolean} true if both metadata objects have 
  *   all the same keys and associated values
  */

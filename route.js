@@ -270,7 +270,13 @@ Route.getBackref = function(matchArray){
 };
 
 /**
- *
+ * replaces backreferences in the regular expression with
+ *   captured strings. Supports up to nine backreferences
+ *   labeled 1 - 9.
+ * @param {Array} backref captured strings
+ * @param {RegExp} regexp regular expression containing backreferences
+ * @returns {RegExp} regular expression with backreferences replaced
+ *   with actual string representations
  */
 Route.subBackref = function(backref, regexp){
   var str = regexp.toString();

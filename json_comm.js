@@ -1,3 +1,9 @@
+/**
+ * Spacebrew utility for handling translation between JSON messages and 
+ *   Spacebrew API.
+ * @module spacebrew/json_comm
+ */
+
 var Client = require('./leaf.js');
 var Route = require('./route.js');
 var Admin = require('./admin.js');
@@ -5,7 +11,16 @@ var Validator = require('ajv');
 var Schema = require('./schema.json');
 
 /**
- *
+ * Creates an instance of the JSON -> API translator.
+ * @constructor
+ * @param {spacebrew/manager} spacebrewManager The Spacebrew Manager to
+ *   execute API requests against
+ * @param {function} clientCallback A callback to use when messages need to be
+ *   sent to clients
+ * @param {function} adminCallback A callback to use when messages need to be
+ *   sent to admins
+ * @param {Logger} logger an object to use for logging 
+ *   (debug, warn, error, etc.)
  */
 var JsonComm = function(spacebrewManager, 
                         clientCallback, 
