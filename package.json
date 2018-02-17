@@ -1,6 +1,6 @@
 {
-  "name": "spacebrew",
-  "version": "0.4.0",
+  "name": "@spacebrew/server-core",
+  "version": "1.0.0",
   "description": "A dynamically re-routable software toolkit for choreographing interactive spaces.",
   "keywords": [
     "spaces",
@@ -9,15 +9,15 @@
     "websockets",
     "websocket",
     "communication",
-    "pubsub"
+    "pubsub",
+    "iot"
   ],
   "homepage": "http://docs.spacebrew.cc/",
   "bugs": {
     "url": "https://github.com/spacebrew/spacebrew/issues"
   },
   "license": "MIT",
-  "author": "LAB at Rockwell Group",
-  "main": "node_server_forever.js",
+  "main": "index.js",
   "repository": {
     "type": "git",
     "url": "git://github.com/spacebrew/spacebrew.git"
@@ -30,24 +30,14 @@
   },
   "dependencies": {
     "ajv": "^4.1.7",
-    "eslint": "^3.1.0",
-    "finalhandler": "^0.5.0",
-    "istanbul": "^0.4.4",
-    "mocha": "^2.5.3",
-    "node-uuid": "^1.4.7",
-    "serve-static": "^1.11.1",
-    "ws": "^1.1.1"
+    "node-uuid": "^1.4.7"
   },
   "devDependencies": {
     "chai": "^3.5.0",
-    "eslint": "^2.2.0",
-    "istanbul": "^0.4.2",
+    "eslint": "^3.1.0",
+    "istanbul": "^0.4.4",
     "jsdoc": "^3.4.0",
-    "mocha": "^2.4.5"
-  },
-  "optionalDependencies": {
-    "bufferutil": "^1.2.1",
-    "utf-8-validate": "^1.2.1"
+    "mocha": "^2.5.3"
   },
   "engines": {
     "node": ">=0.12.0"

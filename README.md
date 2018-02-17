@@ -1,11 +1,11 @@
-Spacebrew Server
-================
+Spacebrew Server Core
+=====================
 
 A dynamically re-routable software toolkit for choreographing interactive spaces. Visit http://www.spacebrew.cc to learn more about spacebrew. On our site we feature a bunch of example apps and tutorials to help you get started. You'll also find a blog where we feature spacebrew projects and events.  
   
-@version: 		0.4.0  
-@date:			April 10, 2014
-@contributors: 		LAB at Rockwell Group, Quin Kennedy, Brett Renfer, Josh Walton, James Tichenor, Julio Terra   
+@version: 1.0.0
+@date: November 3, 2016
+@contributors: Quin Kennedy, Brett Renfer, Josh Walton, James Tichenor, Julio Terra   
   
 Getting Started
 ---------------  
