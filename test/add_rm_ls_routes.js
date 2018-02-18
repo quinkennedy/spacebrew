@@ -42,12 +42,12 @@ describe('route mgmnt', function(){
       expect(sb.addRoute(route2)).to.be.true;
     });
     it('removes routes',
-      function(){
-        expect(sb.removeRoute(route1)).to.be.true;
-        expect(sb.getRoutes()).to.deep.equal([d.route2]);
-        expect(sb.removeRoute(route2)).to.be.true;
-        expect(sb.getRoutes()).to.deep.equal([]);
-      }
+       function(){
+         expect(sb.removeRoute(route1)).to.be.true;
+         expect(sb.getRoutes()).to.deep.equal([d.route2]);
+         expect(sb.removeRoute(route2)).to.be.true;
+         expect(sb.getRoutes()).to.deep.equal([]);
+       }
     );
     it('does not remove routes that are not registered', function(){
       expect(sb.removeRoute(route1)).to.be.true;

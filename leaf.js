@@ -109,9 +109,8 @@ Leaf.prototype.addOutConnection = function(publisher,
                                            route){
   var added = false;
   //go through all connections registered with the specified publisher.
-  for(var connectionI = publisher.connectedTo.length - 1;
-      connectionI >= 0 && !added;
-      connectionI--){
+  var connectionI = publisher.connectedTo.length - 1;
+  for(; connectionI >= 0 && !added; connectionI--){
     var connection = publisher.connectedTo[connectionI];
     //if there are any copies, add the route to that existing connection.
     if (connection.client === subClient &&
@@ -141,14 +140,13 @@ Leaf.prototype.addOutConnection = function(publisher,
  * @param {Route} route The route that matches this connection.
  */
 Leaf.prototype.addInConnection = function(pubClient,
-                                           publisher, 
-                                           subscriber, 
-                                           route){
+                                          publisher, 
+                                          subscriber, 
+                                          route){
   var added = false;
   //go through all connections registered with the specified subscriber.
-  for(var connectionI = subscriber.connectedTo.length - 1;
-      connectionI >= 0 && !added;
-      connectionI--){
+  var connectionI = subscriber.connectedTo.length - 1;
+  for(; connectionI >= 0 && !added; connectionI--){
     var connection = subscriber.connectedTo[connectionI];
     //if there are any copies, add the route to that existing connection.
     if (connection.client === pubClient &&
@@ -177,14 +175,12 @@ Leaf.prototype.getOutgoingConnections = function(){
   var connections = [];
 
   //for each publisher of this client
-  for(var publisherI = this.publishers.length - 1;
-      publisherI >= 0;
-      publisherI--){
+  var publisherI = this.publishers.length - 1;
+  for(; publisherI >= 0; publisherI--){
     var publisher = this.publishers[publisherI];
     //for each connection from this publisher
-    for(var connectionI = publisher.connectedTo.length - 1;
-        connectionI >= 0;
-        connectionI--){
+    var connectionI = publisher.connectedTo.length - 1;
+    for(; connectionI >= 0; connectionI--){
       var connectedTo = publisher.connectedTo[connectionI];
       //construct a connection map
       var connection = {type:publisher.type,
@@ -194,9 +190,8 @@ Leaf.prototype.getOutgoingConnections = function(){
                             endpoint:connectedTo.endpoint.name},
                         routes:[]};
       //add all linked routes
-      for(var routeI = connectedTo.routes.length - 1;
-          routeI >= 0;
-          routeI--){
+      var routeI = connectedTo.routes.length - 1;
+      for(; routeI >= 0; routeI--){
         var route = connectedTo.routes[routeI];
         connection.routes.push(route.uuid);
       }
@@ -217,14 +212,12 @@ Leaf.prototype.getConnections = function(){
   var connections = this.getOutgoingConnections();
 
   //for each subscriber of this client
-  for(var subscriberI = this.subscribers.length - 1;
-      subscriberI >= 0;
-      subscriberI--){
+  var subscriberI = this.subscribers.length - 1;
+  for(; subscriberI >= 0; subscriberI--){
     var subscriber = this.subscribers[subscriberI];
     //for each connection to this subscriber
-    for(var connectionI = subscriber.connectedTo.length - 1;
-        connectionI >= 0;
-        connectionI--){
+    var connectionI = subscriber.connectedTo.length - 1;
+    for(; connectionI >= 0; connectionI--){
       var connectedTo = subscriber.connectedTo[connectionI];
       //as long as the connection doesn't come back to this client
       if (connectedTo.client !== this){
@@ -236,9 +229,8 @@ Leaf.prototype.getConnections = function(){
                               endpoint:subscriber.name},
                           routes:[]};
         //add all linked routes
-        for(var routeI = connectedTo.routes.length - 1;
-            routeI >= 0;
-            routeI--){
+        var routeI = connectedTo.routes.length - 1;
+        for(; routeI >= 0; routeI--){
           var route = connectedTo.routes[routeI];
           connection.routes.push(route.uuid);
         }
@@ -260,13 +252,14 @@ Leaf.prototype.getConnections = function(){
  */
 Leaf.cleanSubscribers = function(subscriberList){
   var subs = [];
-  for(var subscriberI = 0; 
-      Array.isArray(subscriberList) && subscriberI < subscriberList.length; 
-      subscriberI++){
-    var subscriber = subscriberList[subscriberI];
-    subs.push({name:'' + subscriber.name, 
-               type:'' + subscriber.type,
-               connectedTo:[]});
+  if (Array.isArray(subscriberList)){
+    var subscriberI = 0;
+    for(; subscriberI < subscriberList.length; subscriberI++){
+      var subscriber = subscriberList[subscriberI];
+      subs.push({name:'' + subscriber.name, 
+                 type:'' + subscriber.type,
+                 connectedTo:[]});
+    }
   }
   return subs;
 };
@@ -279,13 +272,15 @@ Leaf.cleanSubscribers = function(subscriberList){
  */
 Leaf.cleanPublishers = function(publisherList){
   var pubs = [];
-  for(var i = 0; Array.isArray(publisherList) && i < publisherList.length; i++){
-    var curr = publisherList[i];
-    pubs.push({name:'' + curr.name, 
-               type:'' + curr.type, 
-               default:'' + curr.default,
-               connectedTo:[],
-               routes:[]});
+  if (Array.isArray(publisherList)){
+    for(var i = 0; i < publisherList.length; i++){
+      var curr = publisherList[i];
+      pubs.push({name:'' + curr.name, 
+                 type:'' + curr.type, 
+                 default:'' + curr.default,
+                 connectedTo:[],
+                 routes:[]});
+    }
   }
   return pubs;
 };

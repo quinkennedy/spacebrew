@@ -15,7 +15,7 @@ var Leaf = require('./leaf.js');
  *   what messages/how verbose communication is
  */
 var Admin = function(sendCallback, 
-                    options){
+                     options){
   
   /** the function that will be called when a message is going to this admin */
   this.sendCallback = Leaf.verifyFunction(sendCallback); 
@@ -113,16 +113,14 @@ Admin.configs.NO_MSGS = {key:'no_msgs',
 Admin.cleanConfig = function(config){
   var cleaned = {};
   //for each allowed config
-  for(var configI = Admin.configs.length - 1;
-      configI >= 0;
-      configI--){
+  var configI = Admin.configs.length - 1;
+  for(; configI >= 0; configI--){
     var configDef = Admin.configs[configI];
     var currValue = String(config[configDef.key]);
     var matched = false;
     //for each allowed value
-    for(var valueI = configDef.values.length - 1;
-        valueI >= 0 && !matched;
-        valueI--){
+    var valueI = configDef.values.length - 1;
+    for(; valueI >= 0 && !matched; valueI--){
       var value = configDef.values[valueI];
       //see if the passed-in value matches
       var split = currValue.split(value);

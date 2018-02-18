@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint no-console: 0 */
 
 /**
  * This is a command-line script for launching various servers
@@ -72,6 +73,7 @@ function startServer(argv, index){
  * @param {number} index current index into the arguments list to start
  *   parsing options from
  * @param {object} options An object to fill based on parsed options
+ * @returns {number} index for next command-line argument to process
  */
 function gatherOptions(argv, index, options){
   var i = index;

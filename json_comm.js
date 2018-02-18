@@ -111,9 +111,8 @@ JsonComm.prototype.handleAdminMessage = function(message, metadata, handle){
             type === Admin.messageTypes.REMOVE){
           adminMsg = [];
           //add all client configs
-          for(var clientI = data.clients.length - 1;
-              clientI >= 0;
-              clientI--){
+          var clientI = data.clients.length - 1;
+          for(; clientI >= 0; clientI--){
             var client = data.clients[clientI];
             if (type === Admin.messageTypes.ADD){
               adminMsg.push(
@@ -130,26 +129,26 @@ JsonComm.prototype.handleAdminMessage = function(message, metadata, handle){
             }
           }
           //add all routes
-          for(var connectionI = data.connections.length - 1;
-              connectionI >= 0;
-              connectionI--){
+          var connectionI = data.connections.length - 1;
+          for(; connectionI >= 0; connectionI--){
             var connection = data.connections[connectionI];
             var getClientFrom = function(uuid, clients){
-              for(var clientI = clients.length - 1;
-                  clientI >= 0;
-                  clientI--){
+              var clientI = clients.length - 1;
+              for(; clientI >= 0; clientI--){
                 var client = clients[clientI];
                 if (client.uuid === uuid){
                   return client;
                 }
               }
             };
-            var pubClient = self.spacebrewManager.clients[
-                              self.spacebrewManager.indexOfClient(
-                                connection.from.uuid)];
-            var subClient = self.spacebrewManager.clients[
-                              self.spacebrewManager.indexOfClient(
-                                connection.to.uuid)];
+            var pubClient = 
+              self.spacebrewManager.clients[
+                self.spacebrewManager.indexOfClient(
+                  connection.from.uuid)];
+            var subClient = 
+              self.spacebrewManager.clients[
+                self.spacebrewManager.indexOfClient(
+                  connection.to.uuid)];
             if (pubClient === undefined){
               pubClient = getClientFrom(connection.from.uuid, data.clients);
             }

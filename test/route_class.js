@@ -8,128 +8,130 @@ var d = new D();
 describe('Route', function(){
   describe('Constructing', function(){
     it('you can define a route with strings',
-      function(){
-        expect(new Route(Route.styles.STRING,
-                         'type',
+       function(){
+         expect(new Route(Route.styles.STRING,
+                          'type',
                           {name:'client1',
                            metadata:{}},
                           'pub1',
                           {name:'client2',
                            metadata:{}},
                           'sub1')).to.be.instanceof(Route);
-      }
+       }
     );
     it('you can define a route with uuid\'s',
-      function(){
-        expect(new Route(Route.styles.UUID,
-                         'type',
-                         'client1-uuid',
-                         'pub1',
-                         'client2-uuid',
-                         'sub1')).to.be.instanceof(Route);
-      }
+       function(){
+         expect(new Route(Route.styles.UUID,
+                          'type',
+                          'client1-uuid',
+                          'pub1',
+                          'client2-uuid',
+                          'sub1')).to.be.instanceof(Route);
+       }
     );
     it('you can define a route with regular expressions',
-      function(){
-        expect(new Route(Route.styles.REGEXP,
-                         /type/,
-                         {name:/client1/,
-                          metadata:[]},
-                         /pub1/,
-                         {name:/client2/,
-                          metadata:[]},
-                         /sub1/)).to.be.instanceof(Route);
-      }
+       function(){
+         expect(new Route(Route.styles.REGEXP,
+                          /type/,
+                          {name:/client1/,
+                           metadata:[]},
+                          /pub1/,
+                          {name:/client2/,
+                           metadata:[]},
+                          /sub1/)).to.be.instanceof(Route);
+       }
     );
     it('but you have to use something in Route.styles.list',
-      function(){
-        expect(Route.bind(Route, 'rando',
-                                 'type',
-                                 'client1',
-                                 'pub1',
-                                 'client2',
-                                 'sub1')).
-          to.throw('style argument must be one of '+Route.styles.join(', '));
-      }
+       function(){
+         expect(Route.bind(Route, 
+                           'rando',
+                           'type',
+                           'client1',
+                           'pub1',
+                           'client2',
+                           'sub1')).
+           to.throw('style argument must be one of '+Route.styles.join(', '));
+       }
     );
     //TODO: test metadata:[{key:RegExp, value:RegExp}]
     it('have to use all RegExp objects if you declare regex',
-      function(){
-        var formatArgs = 
-          function(style, type, pubName, pubEndpoint, subName, subEndpoint){
-            return [style, 
-                    type, 
-                    {name:pubName, metadata:[]}, 
-                    pubEndpoint, 
-                    {name:subName, metadata:[]}, 
-                    subEndpoint];
-          };
-        var testArgs = [Route.styles.REGEXP, 
-                        /type/, 
-                        /client1/, 
-                        /pub1/, 
-                        /client2/, 
-                        /sub1/];
-        var applyToRoute = function(args){
-          Route.apply(this, args);
-        };
-        for(var i = 1; i < testArgs.length; i++){
-          var currArgs = [];
-          for(var j = 0; j < testArgs.length; j++){
-            currArgs.push(j === i ? testArgs[j].toString() : testArgs[j]);
-          }
-          var formattedArgs = formatArgs.apply(this, currArgs);
-          expect(applyToRoute.bind(Route, formattedArgs)).
-            to.throw('type, fromId.name, publisherName, ' + 
-                     'toId.name, and subscriberName must all ' +
-                     'be RegExp objects when style is regexp');
-        }
-      }
+       function(){
+         var formatArgs = 
+           function(style, type, pubName, pubEndpoint, subName, subEndpoint){
+             return [style, 
+                     type, 
+                     {name:pubName, metadata:[]}, 
+                     pubEndpoint, 
+                     {name:subName, metadata:[]}, 
+                     subEndpoint];
+           };
+         var testArgs = [Route.styles.REGEXP, 
+                         /type/, 
+                         /client1/, 
+                         /pub1/, 
+                         /client2/, 
+                         /sub1/];
+         var applyToRoute = function(args){
+           Route.apply(this, args);
+         };
+         for(var i = 1; i < testArgs.length; i++){
+           var currArgs = [];
+           for(var j = 0; j < testArgs.length; j++){
+             currArgs.push(j === i ? testArgs[j].toString() : testArgs[j]);
+           }
+           var formattedArgs = formatArgs.apply(this, currArgs);
+           expect(applyToRoute.bind(Route, formattedArgs)).
+             to.throw('type, fromId.name, publisherName, ' + 
+                      'toId.name, and subscriberName must all ' +
+                      'be RegExp objects when style is regexp');
+         }
+       }
     );
     it('have to use all String objects if you declare string style',
-      function(){
-        var formatArgs = 
-          function(style, type, pubName, pubEndpoint, subName, subEndpoint){
-            return [style, 
-                    type, 
-                    {name:pubName, metadata:{}}, 
-                    pubEndpoint, 
-                    {name:subName, metadata:{}}, 
-                    subEndpoint];
-          };
-        var testArgs = [Route.styles.STRING, 
-                        'type', 
-                        'client1', 
-                        'pub1', 
-                        'client2', 
-                        'sub1'];
-        var applyToRoute = function(args){
-          Route.apply(this, args);
-        };
-        for(var i = 1; i < testArgs.length; i++){
-          var currArgs = [];
-          for(var j = 0; j < testArgs.length; j++){
-            currArgs.push(j === i ? new RegExp(testArgs[j]) : testArgs[j]);
-          }
-          var formattedArgs = formatArgs.apply(this, currArgs);
-          expect(applyToRoute.bind(Route, formattedArgs)).
-            to.throw('type, fromId.name, publisherName, ' +
-                     'toId.name, and subscriberName must ' + 
-                     'all be strings when style is string');
-        }
-      }
+       function(){
+         var formatArgs = 
+           function(style, type, pubName, pubEndpoint, subName, subEndpoint){
+             return [style, 
+                     type, 
+                     {name:pubName, metadata:{}}, 
+                     pubEndpoint, 
+                     {name:subName, metadata:{}}, 
+                     subEndpoint];
+           };
+         var testArgs = [Route.styles.STRING, 
+                         'type', 
+                         'client1', 
+                         'pub1', 
+                         'client2', 
+                         'sub1'];
+         var applyToRoute = function(args){
+           Route.apply(this, args);
+         };
+         for(var i = 1; i < testArgs.length; i++){
+           var currArgs = [];
+           for(var j = 0; j < testArgs.length; j++){
+             currArgs.push(j === i ? new RegExp(testArgs[j]) : testArgs[j]);
+           }
+           var formattedArgs = formatArgs.apply(this, currArgs);
+           expect(applyToRoute.bind(Route, formattedArgs)).
+             to.throw('type, fromId.name, publisherName, ' +
+                      'toId.name, and subscriberName must ' + 
+                      'all be strings when style is string');
+         }
+       }
     );
     it('can\'t use maps to identify clients when using UUID style.',
-      function(){
-        expect(Route.bind(Route, Route.styles.UUID,
-                                 'string',
-                                 {name:'client1',
-                                  metadata:{}},
-                                 'pub1',
-                                 'client2-uuid',
-                                 'sub1')).
-          to.throw('fromId must be a UUID string because style is uuid');
-      }
+       function(){
+         expect(Route.bind(Route, 
+                           Route.styles.UUID,
+                           'string',
+                           {name:'client1',
+                            metadata:{}},
+                           'pub1',
+                           'client2-uuid',
+                           'sub1')).
+           to.throw('fromId must be a UUID string because style is uuid');
+       }
     );
     //TODO: REGEXP requires metadata Arrays
   });
@@ -137,9 +139,9 @@ describe('Route', function(){
     var stringRoute = D.initRoute(d.stringRoute);
 
     it('match a route using an Object where all the information matches',
-      function(){
-        expect(stringRoute.matches(d.stringRoute)).to.be.true;
-      }
+       function(){
+         expect(stringRoute.matches(d.stringRoute)).to.be.true;
+       }
     );
     it('match a route using only the UUID', function(){
       expect(stringRoute.matches(stringRoute.uuid)).to.be.true;
@@ -166,40 +168,40 @@ describe('Route', function(){
         expect(Route.getBackref(match)).to.deep.equal([]);
       });
       it('returns an empty array if there are no captured groups',
-        function(){
-          var match = /h/.exec('hello');
-          expect(match).to.have.lengthOf(1);
-          expect(Route.getBackref(match)).to.deep.equal([]);
-        }
+         function(){
+           var match = /h/.exec('hello');
+           expect(match).to.have.lengthOf(1);
+           expect(Route.getBackref(match)).to.deep.equal([]);
+         }
       );
     });
     describe('subBackref', function(){
       //signature Route.subBackref(backref, regexp)
       it('returns a matching RegExp if there are no captured groups',
-        function(){
-          expect(Route.subBackref([], /\1/).toString()).
-            to.equal(/\1/.toString());
-        }
+         function(){
+           expect(Route.subBackref([], /\1/).toString()).
+             to.equal(/\1/.toString());
+         }
       );
       it('returns a matching RegExp if there are no backreferences',
-        function(){
-          expect(Route.subBackref(['hey','ho'], /ll/).toString()).
-            to.equal(/ll/.toString());
-        }
+         function(){
+           expect(Route.subBackref(['hey','ho'], /ll/).toString()).
+             to.equal(/ll/.toString());
+         }
       );
       it('replaces the backreferences based on the captured groups',
-        function(){
-          expect(Route.subBackref(['hey','ho'],/\1\2/).toString()).
-            to.equal(/heyho/.toString());
-          expect(Route.subBackref(['hey','ho'],/\1\2\1/).toString()).
-            to.equal(/heyhohey/.toString());
-        }
+         function(){
+           expect(Route.subBackref(['hey','ho'],/\1\2/).toString()).
+             to.equal(/heyho/.toString());
+           expect(Route.subBackref(['hey','ho'],/\1\2\1/).toString()).
+             to.equal(/heyhohey/.toString());
+         }
       );
       it('replaces matched backreferences, and decrements unmatched ones',
-        function(){
-          expect(Route.subBackref(['hey','ho'],/\3/).toString()).
-            to.equal(/\1/.toString());
-        }
+         function(){
+           expect(Route.subBackref(['hey','ho'],/\3/).toString()).
+             to.equal(/\1/.toString());
+         }
       );
     });
     describe('matchRegexpChain', function(){
@@ -232,24 +234,24 @@ describe('Route', function(){
         expect(Route.matchRegexpChain(regexps, strings)).to.be.false;
       });
       it('backreferences use capture groups from earlier in the chain',
-        function(){
-          regexps = [/(hi)/,/\1/];
-          strings = ['hi','hi'];
-          expect(Route.matchRegexpChain(regexps, strings)).to.be.true;
-          regexps = [/(.*)i/,/\1ello/];
-          strings = ['hi','hello'];
-          expect(Route.matchRegexpChain(regexps, strings)).to.be.true;
-          regexps = [/^(.)/, /^\1/];
-          strings = ['hi','hello'];
-          expect(Route.matchRegexpChain(regexps, strings)).to.be.true;
-          strings = ['pie','pillow'];
-          expect(Route.matchRegexpChain(regexps, strings)).to.be.true;
-          strings = ['trick','majic'];
-          expect(Route.matchRegexpChain(regexps, strings)).to.be.false;
-          regexps = [/(.*)i/,/\1e(.)\2o/];
-          strings = ['hi','hello'];
-          expect(Route.matchRegexpChain(regexps, strings)).to.be.true;
-        }
+         function(){
+           regexps = [/(hi)/,/\1/];
+           strings = ['hi','hi'];
+           expect(Route.matchRegexpChain(regexps, strings)).to.be.true;
+           regexps = [/(.*)i/,/\1ello/];
+           strings = ['hi','hello'];
+           expect(Route.matchRegexpChain(regexps, strings)).to.be.true;
+           regexps = [/^(.)/, /^\1/];
+           strings = ['hi','hello'];
+           expect(Route.matchRegexpChain(regexps, strings)).to.be.true;
+           strings = ['pie','pillow'];
+           expect(Route.matchRegexpChain(regexps, strings)).to.be.true;
+           strings = ['trick','majic'];
+           expect(Route.matchRegexpChain(regexps, strings)).to.be.false;
+           regexps = [/(.*)i/,/\1e(.)\2o/];
+           strings = ['hi','hello'];
+           expect(Route.matchRegexpChain(regexps, strings)).to.be.true;
+         }
       );
       it('capture groups append as you go down the chain', function(){
         regexps = [/^(.)/,/^(.)/,/^\1.*\s\2/];
@@ -269,12 +271,12 @@ describe('Route', function(){
         expect(Route.metadataRegexpMatch(mreAll, {})).to.be.false;
       });
       it('.* RegExp matches non-empty metadata',
-        function(){
-          expect(Route.metadataRegexpMatch(mreAll, {hi:'bye'})).to.be.true;
-          expect(Route.metadataRegexpMatch(mreAll, {hi:'bye', one:'two'})).
-            to.be.true;
-          expect(Route.metadataRegexpMatch(mreAll, {})).to.be.false;
-        }
+         function(){
+           expect(Route.metadataRegexpMatch(mreAll, {hi:'bye'})).to.be.true;
+           expect(Route.metadataRegexpMatch(mreAll, {hi:'bye', one:'two'})).
+             to.be.true;
+           expect(Route.metadataRegexpMatch(mreAll, {})).to.be.false;
+         }
       );
       it('all metadata entries must match some RegExp', function(){
         expect(Route.metadataRegexpMatch(mreIP, {ip:'127.0.0.1'})).
@@ -303,13 +305,13 @@ describe('Route', function(){
           to.be.true;
       });
       it('backreference should also reference capture groups in value',
-        function(){
-          var mreRef2 = [{key:/^(.)/, value:/^\1.*(.)\s\2/}];
-          expect(Route.metadataRegexpMatch(mreRef2, {pie:'pillow willow'})).
-            to.be.true;
-          expect(Route.metadataRegexpMatch(mreRef2, {pie:'pillow fight'})).
-            to.be.false;
-        }
+         function(){
+           var mreRef2 = [{key:/^(.)/, value:/^\1.*(.)\s\2/}];
+           expect(Route.metadataRegexpMatch(mreRef2, {pie:'pillow willow'})).
+             to.be.true;
+           expect(Route.metadataRegexpMatch(mreRef2, {pie:'pillow fight'})).
+             to.be.false;
+         }
       );
     });
   });

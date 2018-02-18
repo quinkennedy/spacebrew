@@ -9,6 +9,14 @@ rules:
     - 2
     - 2
     - VariableDeclarator: 2
+      FunctionDeclaration:
+        parameters: first
+      FunctionExpression:
+        parameters: first
+      CallExpression:
+        arguments: first
+      ArrayExpression: first
+      ObjectExpression: first
   linebreak-style:
     - 2
     - unix

@@ -222,15 +222,13 @@ Route.prototype.getConnections = function(){
   var connections = [];
 
   //go through all publishers matched against this route
-  for(var matchI = this.from.matched.length - 1;
-      matchI >= 0;
-      matchI--){
+  var matchI = this.from.matched.length - 1;
+  for(; matchI >= 0; matchI--){
     var pubClient = this.from.matched[matchI].client;
     var publisher = this.from.matched[matchI].endpoint;
     //for each connection associated with this publisher
-    for(var connectionI = publisher.connectedTo.length - 1;
-        connectionI >= 0;
-        connectionI--){
+    var connectionI = publisher.connectedTo.length - 1;
+    for(; connectionI >= 0; connectionI--){
       var connection = publisher.connectedTo[connectionI];
       var subClient = connection.client;
       var subscriber = connection.endpoint;
@@ -241,9 +239,8 @@ Route.prototype.getConnections = function(){
                          endpoint:subscriber.name},
                      routes:[]};
       //add all route uuids
-      for(var routeI = connection.routes.length - 1;
-          routeI >= 0; 
-          routeI--){
+      var routeI = connection.routes.length - 1;
+      for(; routeI >= 0; routeI--){
         var route = connection.routes[routeI];
         connMap.routes.push(route.uuid);
       }
@@ -281,9 +278,12 @@ Route.getBackref = function(matchArray){
 Route.subBackref = function(backref, regexp){
   var str = regexp.toString();
   for(var i = 1; i <= 9; i++){
-    var replaceWith = (backref.length >= i ?
-                       backref[i - 1] :
-                       '\\' + (i - backref.length));
+    var replaceWith;
+    if (backref.length >= i){
+      replaceWith = backref[i - 1];
+    } else {
+      replaceWith = '\\' + (i - backref.length);
+    }
     var str2 = str;
     do{
       str = str2;
@@ -344,15 +344,13 @@ Route.metadataRegexpMatch = function(mRegexp, mClient){
 
   //go through each key in the metadata
   var clientKeys = Object.keys(mClient);
-  for(var metadataI = clientKeys.length - 1;
-      metadataI >= 0 && propMatched;
-      metadataI--){
+  var metadataI = clientKeys.length - 1;
+  for(; metadataI >= 0 && propMatched; metadataI--){
     var key = clientKeys[metadataI];
     propMatched = false;
     //see if there is a regex in the RegExp array that matches this key
-    for(var regexpI = mRegexp.length - 1;
-        regexpI >= 0;
-        regexpI--){
+    var regexpI = mRegexp.length - 1;
+    for(; regexpI >= 0; regexpI--){
       if(propMatched && regexpMatched[regexpI]){
         continue;
       }
@@ -370,9 +368,8 @@ Route.metadataRegexpMatch = function(mRegexp, mClient){
   var matched = propMatched;
   // check that all entries in the RegExp matching array
   //  have matched against something
-  for(var reMatchI = regexpMatched.length - 1;
-      reMatchI >= 0 && matched;
-      reMatchI--){
+  var reMatchI = regexpMatched.length - 1;
+  for(; reMatchI >= 0 && matched; reMatchI--){
     matched = matched && regexpMatched[reMatchI];
   }
   return matched;
