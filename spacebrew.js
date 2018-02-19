@@ -14,7 +14,7 @@
 
 //dependencies
 var path = require('path')
-	, ws = require('ws')
+    , ws = require('ws')
     , logger = require('./logger')
     , spacebrew = exports
     , serveStatic = require('serve-static')

@@ -3,7 +3,7 @@
  * @module spacebrew/leaf
  */
 
-var uuid = require('node-uuid');
+var uuid = require('uuid');
 
 /**
  * Creates an instance of a Spacebrew Leaf

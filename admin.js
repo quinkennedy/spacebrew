@@ -3,7 +3,7 @@
  * @module spacebrew/admin
  */
 
-var uuid = require('node-uuid');
+var uuid = require('uuid');
 var Leaf = require('./leaf.js');
 
 /**
