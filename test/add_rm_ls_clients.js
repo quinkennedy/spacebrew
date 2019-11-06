@@ -39,6 +39,9 @@ describe('client mgmnt', function(){
       expect(sb.addClient(client1_copy)).to.be.false;
       expect(sb.getClients()).to.deep.equal([d.client1, d.client2]);
     });
+    it('throws error if client is not a Leaf', function(){
+      expect(() => sb.addClient({})).to.throw(TypeError, 'argument must be a Leaf instance');
+    })
   });
   describe('removing clients', function(){
     beforeEach(function(){
