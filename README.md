@@ -2,24 +2,24 @@ Spacebrew Server Core
 =====================
 
 A dynamically re-routable software toolkit for choreographing interactive spaces. Visit http://www.spacebrew.cc to learn more about spacebrew. On our site we feature a bunch of example apps and tutorials to help you get started. You'll also find a blog where we feature spacebrew projects and events.  
-  
-@version: 1.0.0
-@date: November 3, 2016
+
+@version: 2.0.0-alpha
+@date: November 20, 2019
 @contributors: Quin Kennedy, Brett Renfer, Josh Walton, James Tichenor, Julio Terra   
-  
+
 Getting Started
 ---------------  
-  
+
 ### 1. Install Dependencies  
 * Download and install [Node.js](http://nodejs.org)  
 * Clone the repo from github  
 * Install the dependencies using node packaged modules   
     - `npm install`
-  
+
 ### 2. Run the Server  
 * Open terminal and navigate to the base directory of the spacebrew server  
 * Run the server by using `node node_server_forever.js`  
-  
+
 `node_server_forever.js` vs `node_server.js`
 The first of these two files runs node using the forever-monitor node utility. This utility relaunches the spacebrew server if it crashes and it saves logs of the standard output from the spacebrew server to log files in the data/logs directory.
 
@@ -27,9 +27,9 @@ The first of these two files runs node using the forever-monitor node utility. T
 * Open the [spacebrew_button example](http://spacebrew.github.io/spacebrew.js/spacebrew_button/index.html?server=localhost&name=button2) - make sure that the `server=` in the query string points to the appropriate host. Customize the `name=` element in the query string to change your apps name.  
 * Open the [spacebrew admin interface](http://spacebrew.github.io/spacebrew/admin/admin.html?server=localhost) in another browser window - again, make sure that the `server=` in the query string points to the appropriate host.  
 * Start connecting apps and routing data.   
-  
+
 Spacebrew Server Options
------------------------- 
+------------------------
 Here is an overview of the command line options that the spacebrew server accepts:
 ```
 --port (-p): set the port of the spacebrew server (default 9000)
@@ -52,15 +52,15 @@ Here are a few examples of how to launch the app using command line options:
 ```
 
 Other Services
--------------- 
+--------------
 
 ### HTTP Link
 
 The HTTP Link (`http_link.js`) is a Node.js app which acts essentially as an HTTP <-> Websocket bridge for Spacebrew. Only `GET` requests are supported currently, so all commands are read from the query string. Responses are provided as JSON.
 
-The HTTP Link allows you to use HTTP-only devices, such as the [Electric Imp](http://electricimp.com/), within the Spacebrew environment. 
+The HTTP Link allows you to use HTTP-only devices, such as the [Electric Imp](http://electricimp.com/), within the Spacebrew environment.
 
-1. Register a client by sending a `config` query string key which contains the same json structure as would be sent over Websockets 
+1. Register a client by sending a `config` query string key which contains the same json structure as would be sent over Websockets
     - `http://localhost:9092/?config={"config":{"name":"test","publish":{"messages":[{"name":"output","type":"string"},{"name":"out","type":"string"}]},"subscribe":{"messages":[{"name":"input","type":"string"}]}}}`
     - this is the human-readable version, don't forget to URL encode the data first
 * The HTTP Link will respond with a `clientID` that you will use in the future to refer your client.
